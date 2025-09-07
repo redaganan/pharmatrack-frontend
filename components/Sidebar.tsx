@@ -21,7 +21,10 @@ const Sidebar: React.FC = () => {
         <Link to="/orders" className="sidebar-link">
           Orders
         </Link>
-        <Link to="/logout" className="sidebar-link logout">
+        <Link to="/profile" className="sidebar-link">
+          Profile
+        </Link>
+        <Link to="/login" className="sidebar-link logout">
           Log Out
         </Link>
       </nav>

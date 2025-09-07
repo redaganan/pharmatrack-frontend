@@ -12,6 +12,9 @@
   text-align: center;
 }
 
+.sidebar-header{ display:flex; flex-direction:column; align-items:center; gap:8px; margin-bottom:18px; }
+.sidebar-logo{ width: 160px; height:auto; display:block; }
+
 .sidebar-nav {
   display: flex;
   flex-direction: column;

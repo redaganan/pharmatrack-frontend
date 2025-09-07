@@ -6,12 +6,20 @@ import { Logo, Title, Footer } from "@react-login-page/page5";
 import { Username, Password } from "@react-login-page/page5";
 // buttons
 import { Submit, } from "@react-login-page/page5";
+import reactLogo from "../src/assets/react.svg";
 
 const LogIn: React.FC = () => {
   return (
 
     <LoginPage>
-      <Title>Welcome to PharmaTrack</Title>
+      <div className="login-header">
+        <Logo>
+          <img src={reactLogo} alt="PharmaTrack" className="login-logo" />
+        </Logo>
+        <div className="login-title">
+          <Title>Welcome to PharmaTrack</Title>
+        </div>
+      </div>
       <Username />
       <Password />
       <Submit>Log In</Submit>

@@ -47,6 +47,11 @@ const DashboardBody: React.FC = () => {
       </div>
 
       <div className="lists-row">
+        <div className="list-card soon-expire">
+          <h3>Soon to expire Products</h3>
+          <p className="empty">None</p>
+        </div>
+
         <div className="list-card out-of-stock">
           <h3>Out of stock Products</h3>
           {outOfStock.length === 0 ? (

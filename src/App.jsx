@@ -1,26 +1,55 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import LogIn from '../pages/LogIn';
-import DashBoard from '../pages/DashBoard';
-import Products from '../pages/Products';
-import Orders from '../pages/Orders';
-import CreateAccount from '../pages/CreateAccount';
-import Profile from '../pages/Profile';
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 
-const App = () => {
+// Lazy loaded pages for code-splitting
+const LogIn = lazy(() => import('../pages/LogIn'));
+const DashBoard = lazy(() => import('../pages/DashBoard'));
+const Products = lazy(() => import('../pages/Products'));
+const Orders = lazy(() => import('../pages/Orders'));
+const CreateAccount = lazy(() => import('../pages/CreateAccount'));
+const Profile = lazy(() => import('../pages/Profile'));
+
+// Simple fallback (blank) – spinner removed per request
+const Fallback = () => null;
+
+const PageTransitions = () => {
+  const location = useLocation();
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<LogIn />} />
-        <Route path="/login" element={<LogIn />} />
-        <Route path="/dashboard" element={<DashBoard />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/orders" element={<Orders />} />
-  <Route path="/create-account" element={<CreateAccount />} />
-  <Route path="/profile" element={<Profile />} />
+    <AnimatePresence mode="wait" initial={false}>
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<MotionWrap><LogIn /></MotionWrap>} />
+        <Route path="/login" element={<MotionWrap><LogIn /></MotionWrap>} />
+        <Route path="/dashboard" element={<MotionWrap><DashBoard /></MotionWrap>} />
+        <Route path="/products" element={<MotionWrap><Products /></MotionWrap>} />
+        <Route path="/orders" element={<MotionWrap><Orders /></MotionWrap>} />
+        <Route path="/create-account" element={<MotionWrap><CreateAccount /></MotionWrap>} />
+        <Route path="/profile" element={<MotionWrap><Profile /></MotionWrap>} />
       </Routes>
-    </Router>
+    </AnimatePresence>
   );
 };
+
+const MotionWrap = ({ children }) => (
+  <motion.div
+    style={{ height: '100%', width: '100%' }}
+    initial={{ opacity: 0, x: 40, scale: 0.985 }}
+    animate={{ opacity: 1, x: 0, scale: 1 }}
+    exit={{ opacity: 0, x: -40, scale: 0.985 }}
+    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+  >
+    {children}
+  </motion.div>
+);
+
+const App = () => (
+  <Router>
+    <Suspense fallback={<Fallback />}> 
+      <PageTransitions />
+    </Suspense>
+  </Router>
+);
+
+// Spinner & keyframes removed.
 
 export default App;

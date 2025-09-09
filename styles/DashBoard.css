@@ -130,6 +130,29 @@
   gap: 16px;
 }
 
+.list-card.soon-expire {
+  animation: pulse-emergency 1.2s linear infinite;
+  border: 2px solid #c40000;
+}
+
+@keyframes pulse-emergency {
+  0% { background: #ffffff; color: #c40000; }
+  40% { background: #ffdbdb; color: #8b0000; }
+  50% { background: #ff0000; color: #ffffff; }
+  60% { background: #ffdbdb; color: #8b0000; }
+  100% { background: #ffffff; color: #c40000; }
+}
+
+/* On wider screens center the emergency card visually by spanning both columns */
+@media (min-width: 901px) {
+  .lists-row .list-card.soon-expire {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+  }
+  .lists-row { align-items: start; }
+}
+
 .list-card {
   background: #fff;
   padding: 12px 16px;

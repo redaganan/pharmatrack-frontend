@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+// Uses global button classes from index.css (.btn-primary / .btn-secondary)
 
 type Product = {
   id: number;

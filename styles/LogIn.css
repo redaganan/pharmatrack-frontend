@@ -1,7 +1,4 @@
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-}
+/* body font removed (now comes from global index.css) */
 
 .login-page {
   background-color: var(--login-bg, #f45b69);
@@ -82,6 +79,7 @@ body {
   cursor: pointer;
   font-size: 16px;
   box-sizing: border-box;
+  font-family: inherit;
 }
 
 .login-form button:hover {
@@ -97,13 +95,7 @@ body {
   background-color: var(--login-btn-active, #d82a3b);
 }
 
-.login-page5 section button:hover {
-  background-color: #0070bd;
-}
-
-.login-page5 section button:active {
-  background-color: #00528a;
-}
+/* Removed external template overrides (.login-page5 ...) to avoid blue button bleed */
 
 .login-footer {
   text-align: center;

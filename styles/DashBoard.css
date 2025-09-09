@@ -221,7 +221,8 @@
   border: 1px solid #ddd;
 }
 
-.btn-primary {
+/* Renamed dashboard-specific primary to .btn-info to avoid conflicting with global .btn-primary */
+.btn-info {
   background: #0070bd;
   color: #fff;
   padding: 8px 12px;
@@ -230,6 +231,7 @@
   cursor: pointer;
 }
 
+/* Keep secondary here (global also defines but this is fine) */
 .btn-secondary {
   background: #f2f2f2;
   color: #333;

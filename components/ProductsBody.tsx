@@ -1,12 +1,26 @@
 import React, { useState } from "react";
 // Uses global button classes from index.css (.btn-primary / .btn-secondary)
 
+type Category =
+  | "Baby & Child Care"
+  | "Personal Care & Hygiene"
+  | "Medical Supplies"
+  | "Medicines";
+
+const CATEGORY_OPTIONS: Category[] = [
+  "Baby & Child Care",
+  "Personal Care & Hygiene",
+  "Medical Supplies",
+  "Medicines",
+];
+
 type Product = {
   id: number;
   name: string;
   qty: number;
   price: number;
   expiry: string; // ISO date
+  category: Category;
 };
 
 const initialProducts: Product[] = [
@@ -16,6 +30,7 @@ const initialProducts: Product[] = [
     qty: 10,
     price: 8.5,
     expiry: "2026-06-30",
+    category: "Medicines",
   },
   {
     id: 2,
@@ -23,6 +38,7 @@ const initialProducts: Product[] = [
     qty: 15,
     price: 12.0,
     expiry: "2025-12-31",
+    category: "Medicines",
   },
   {
     id: 3,
@@ -30,6 +46,7 @@ const initialProducts: Product[] = [
     qty: 5,
     price: 45.0,
     expiry: "2026-03-15",
+    category: "Medicines",
   },
   {
     id: 4,
@@ -37,6 +54,7 @@ const initialProducts: Product[] = [
     qty: 8,
     price: 120.0,
     expiry: "2027-01-01",
+    category: "Medicines",
   },
   {
     id: 5,
@@ -44,6 +62,7 @@ const initialProducts: Product[] = [
     qty: 20,
     price: 10.0,
     expiry: "2026-09-30",
+    category: "Medicines",
   },
 ];
 
@@ -54,12 +73,14 @@ const ProductsBody: React.FC = () => {
   const [newQty, setNewQty] = useState<number>(1);
   const [newPrice, setNewPrice] = useState<number>(0);
   const [newExpiry, setNewExpiry] = useState<string>("");
+  const [newCategory, setNewCategory] = useState<Category>("Medicines");
 
   // editing state for Edit action
   const [editing, setEditing] = useState<Product | null>(null);
   const [editQty, setEditQty] = useState<number>(0);
   const [editPrice, setEditPrice] = useState<number>(0);
   const [editExpiry, setEditExpiry] = useState<string>("");
+  const [editCategory, setEditCategory] = useState<Category>("Medicines");
 
   const deleteProduct = (id: number) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
@@ -70,6 +91,7 @@ const ProductsBody: React.FC = () => {
     setNewQty(1);
     setNewPrice(0);
     setNewExpiry("");
+    setNewCategory("Medicines");
     setIsAdding(true);
   };
 
@@ -85,6 +107,7 @@ const ProductsBody: React.FC = () => {
       qty: Math.max(0, Math.floor(newQty)),
       price: Math.max(0, Number(newPrice)),
       expiry: newExpiry || new Date().toISOString().slice(0, 10),
+      category: newCategory,
     };
     setProducts((prev) => [product, ...prev]);
     setIsAdding(false);
@@ -95,6 +118,7 @@ const ProductsBody: React.FC = () => {
     setEditQty(p.qty);
     setEditPrice(p.price);
     setEditExpiry(p.expiry || new Date().toISOString().slice(0, 10));
+    setEditCategory(p.category);
   };
 
   const closeEdit = () => setEditing(null);
@@ -110,6 +134,7 @@ const ProductsBody: React.FC = () => {
               qty: Math.max(0, Math.floor(editQty)),
               price: Number(editPrice),
               expiry: editExpiry,
+              category: editCategory,
             }
           : p
       )
@@ -135,10 +160,11 @@ const ProductsBody: React.FC = () => {
 
       <div className="products-header">
         <div>Product</div>
+        <div className="center">Category</div>
         <div className="center">Expiry</div>
         <div className="center">Quantity</div>
         <div className="center">Price (PHP)</div>
-        <div className="right">Subtotal</div>
+        <div className="center">Subtotal</div>
         <div className="center">Actions</div>
       </div>
 
@@ -146,13 +172,15 @@ const ProductsBody: React.FC = () => {
         <div className="product-row" key={p.id}>
           <div className="product-name">{p.name}</div>
 
+          <div className="product-category center">{p.category}</div>
+
           <div className="product-expiry center">{p.expiry}</div>
 
           <div className="product-qty center">{p.qty}</div>
 
           <div className="product-price center">{p.price.toFixed(2)}</div>
 
-          <div className="product-subtotal right">
+          <div className="product-subtotal center">
             {(p.qty * p.price).toFixed(2)}
           </div>
 
@@ -176,7 +204,8 @@ const ProductsBody: React.FC = () => {
         <div />
         <div />
         <div />
-        <div className="right">
+        <div />
+        <div className="center">
           {products.reduce((s, p) => s + p.qty * p.price, 0).toFixed(2)}
         </div>
         <div />
@@ -195,6 +224,19 @@ const ProductsBody: React.FC = () => {
                   onChange={(e) => setNewName(e.target.value)}
                   required
                 />
+              </label>
+              <label>
+                Category
+                <select
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value as Category)}
+                >
+                  {CATEGORY_OPTIONS.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 Quantity
@@ -253,6 +295,19 @@ const ProductsBody: React.FC = () => {
           <div className="modal">
             <h3>Edit Product</h3>
             <form onSubmit={submitEdit}>
+              <label>
+                Category
+                <select
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value as Category)}
+                >
+                  {CATEGORY_OPTIONS.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label>
                 Quantity
                 <input

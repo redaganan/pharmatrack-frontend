@@ -1,46 +1,66 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-// blocks
-import { Footer, Logo, Title } from "@react-login-page/page5";
-// fields
-import { Password, Username } from "@react-login-page/page5";
-// buttons
-import { Submit } from "@react-login-page/page5";
-import reactLogo from "../src/assets/react.svg";
 import "../styles/LogIn.css";
 
-const LogInBody: React.FC = () => {
-	const navigate = useNavigate();
-	const handleLogin = (e: React.MouseEvent) => {
-		e.preventDefault();
-		navigate("/dashboard");
-	};
 
-	return (
-		<>
-			<div className="login-header">
-				<Logo>
-					<img
-						src={reactLogo}
-						alt="PharmaTrack"
-						className="login-logo"
-					/>
-				</Logo>
-				<div className="login-title">
-					<Title>Welcome to PharmaTrack</Title>
-				</div>
-			</div>
-			<Username />
-			<Password />
-			<Submit onClick={handleLogin}>Log In</Submit>
-			<div className="login-footer">
-				<Link to="/create-account" className="create-account-btn">
-					Create Account
-				</Link>
-			</div>
-			<Footer></Footer>
-		</>
-	);
+
+const LogInBody: React.FC = () => {
+  const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Frontend-only mock to simulate an auth roundtrip.
+  // Replace this with your real API call when connecting backend.
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // setError("Invalid username or password.");
+
+    console.log("Logging in with", { username, password });
+  };
+
+  return (
+    <form className="login-form" onSubmit={handleSubmit}>
+      <div className="login-header">
+        <div className="login-title">
+          <h2>Welcome to PharmaTrack</h2>
+        </div>
+      </div>
+
+      <label htmlFor="username">Username</label>
+      <input
+        id="username"
+        name="username"
+        type="text"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        required
+      />
+
+      <label htmlFor="password">Password</label>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
+
+      {error && <div style={{ color: "red", marginBottom: 8 }}>{error}</div>}
+
+      <button type="submit" disabled={loading}>
+        {loading ? "Logging in..." : "Log In"}
+      </button>
+      <div className="login-footer">
+        <Link to="/create-account" className="create-account-btn">
+          Create Account
+        </Link>
+      </div>
+    </form>
+  );
 };
 
 export default LogInBody;

@@ -2,13 +2,13 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 
-// Lazy loaded pages for code-splitting
-const LogIn = lazy(() => import('../pages/LogIn'));
-const DashBoard = lazy(() => import('../pages/DashBoard'));
-const Products = lazy(() => import('../pages/Products'));
-const Orders = lazy(() => import('../pages/Orders'));
-const CreateAccount = lazy(() => import('../pages/CreateAccount'));
-const Profile = lazy(() => import('../pages/Profile'));
+// Lazy loaded pages for code-splitting (under src/pages)
+const LogIn = lazy(() => import('./pages/LogIn'));
+const DashBoard = lazy(() => import('./pages/DashBoard'));
+const Products = lazy(() => import('./pages/Products'));
+const Orders = lazy(() => import('./pages/Orders'));
+const CreateAccount = lazy(() => import('./pages/CreateAccount'));
+const Profile = lazy(() => import('./pages/Profile'));
 
 // Simple fallback (blank) – spinner removed per request
 const Fallback = () => null;

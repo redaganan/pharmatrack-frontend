@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-// Uses global button classes from index.css (.btn-primary / .btn-secondary)
 
 type Category =
   | "Baby & Child Care"
@@ -75,16 +74,14 @@ const ProductsBody: React.FC = () => {
   const [newExpiry, setNewExpiry] = useState<string>("");
   const [newCategory, setNewCategory] = useState<Category>("Medicines");
 
-  // editing state for Edit action
   const [editing, setEditing] = useState<Product | null>(null);
   const [editQty, setEditQty] = useState<number>(0);
   const [editPrice, setEditPrice] = useState<number>(0);
   const [editExpiry, setEditExpiry] = useState<string>("");
   const [editCategory, setEditCategory] = useState<Category>("Medicines");
 
-  const deleteProduct = (id: number) => {
+  const deleteProduct = (id: number) =>
     setProducts((prev) => prev.filter((p) => p.id !== id));
-  };
 
   const openAdd = () => {
     setNewName("");
@@ -94,7 +91,6 @@ const ProductsBody: React.FC = () => {
     setNewCategory("Medicines");
     setIsAdding(true);
   };
-
   const closeAdd = () => setIsAdding(false);
 
   const submitAdd = (e: React.FormEvent) => {
@@ -120,7 +116,6 @@ const ProductsBody: React.FC = () => {
     setEditExpiry(p.expiry || new Date().toISOString().slice(0, 10));
     setEditCategory(p.category);
   };
-
   const closeEdit = () => setEditing(null);
 
   const submitEdit = (e: React.FormEvent) => {
@@ -171,19 +166,13 @@ const ProductsBody: React.FC = () => {
       {products.map((p) => (
         <div className="product-row" key={p.id}>
           <div className="product-name">{p.name}</div>
-
           <div className="product-category center">{p.category}</div>
-
           <div className="product-expiry center">{p.expiry}</div>
-
           <div className="product-qty center">{p.qty}</div>
-
           <div className="product-price center">{p.price.toFixed(2)}</div>
-
           <div className="product-subtotal center">
             {(p.qty * p.price).toFixed(2)}
           </div>
-
           <div className="product-action center">
             <button className="btn-secondary" onClick={() => openEdit(p)}>
               Edit
@@ -265,7 +254,6 @@ const ProductsBody: React.FC = () => {
                   onChange={(e) => setNewExpiry(e.target.value)}
                 />
               </label>
-
               <div
                 style={{
                   display: "flex",
@@ -317,7 +305,6 @@ const ProductsBody: React.FC = () => {
                   onChange={(e) => setEditQty(Number(e.target.value))}
                 />
               </label>
-
               <label>
                 Price (PHP)
                 <input
@@ -328,7 +315,6 @@ const ProductsBody: React.FC = () => {
                   onChange={(e) => setEditPrice(Number(e.target.value))}
                 />
               </label>
-
               <label>
                 Expiry
                 <input
@@ -337,7 +323,6 @@ const ProductsBody: React.FC = () => {
                   onChange={(e) => setEditExpiry(e.target.value)}
                 />
               </label>
-
               <div
                 style={{
                   display: "flex",

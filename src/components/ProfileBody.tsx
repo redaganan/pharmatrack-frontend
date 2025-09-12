@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "../styles/LogIn.css";
+import "../../styles/LogIn.css";
 
 const ProfileBody: React.FC = () => {
   const [username, setUsername] = useState("");
@@ -32,7 +32,7 @@ const ProfileBody: React.FC = () => {
   return (
     <section>
       <form className="login-form" onSubmit={handleSubmit}>
-        <h2>Profile</h2>
+        <h2>Change Password</h2>
 
         <label htmlFor="username">Username</label>
         <input

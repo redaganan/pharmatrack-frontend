@@ -1,6 +1,6 @@
-import React from 'react';
-import '../styles/LogIn.css';
-import CreateAccountBody from '../components/CreateAccountBody';
+import React from "react";
+import "../../styles/LogIn.css";
+import CreateAccountBody from "../components/CreateAccountBody";
 
 const CreateAccount: React.FC = () => {
   return (

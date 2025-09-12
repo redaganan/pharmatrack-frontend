@@ -31,6 +31,8 @@
   transition: background 0.2s;
 }
 
+.sidebar-link:visited { color: white; }
+
 .sidebar-link:hover {
   background-color: #34495e;
 }

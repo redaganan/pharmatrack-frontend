@@ -1,7 +1,7 @@
 import React from "react";
 import Sidebar from "../components/Sidebar";
-import "../styles/DashBoard.css";
-import "../styles/LogIn.css";
+import "../../styles/DashBoard.css";
+import "../../styles/LogIn.css";
 import ProfileBody from "../components/ProfileBody";
 
 const Profile: React.FC = () => {

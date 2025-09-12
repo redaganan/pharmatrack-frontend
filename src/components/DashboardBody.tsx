@@ -16,7 +16,6 @@ const DashboardBody: React.FC = () => {
   const totalProducts = products.length;
   const totalStock = products.reduce((s, p) => s + p.qty, 0);
   const revenue = products.reduce((s, p) => s + p.qty * p.price, 0).toFixed(2);
-  // For demo `ordersToday` use a small derived value
   const ordersToday = 6;
 
   const outOfStock = products.filter((p) => p.qty === 0);

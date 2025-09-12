@@ -19,3 +19,5 @@ export const loginAccount = async (url: string, data: object) => {
     });
     return await res.json();
 }
+
+// logoutAccount removed (frontend-only logout in Sidebar)

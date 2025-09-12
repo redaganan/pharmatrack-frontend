@@ -1,7 +1,7 @@
 import React from "react";
 import Sidebar from "../components/Sidebar";
 import DashboardBody from "../components/DashboardBody";
-import "../styles/DashBoard.css";
+import "../../styles/DashBoard.css";
 
 const DashBoard: React.FC = () => {
   return (

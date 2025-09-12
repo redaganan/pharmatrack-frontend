@@ -1,7 +1,7 @@
 import React from "react";
 import Sidebar from "../components/Sidebar";
 import OrdersBody from "../components/OrdersBody";
-import "../styles/DashBoard.css";
+import "../../styles/DashBoard.css";
 
 const Orders: React.FC = () => {
   return (

@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import "../styles/LogIn.css";
+import "../../styles/LogIn.css";
 import { motion } from "framer-motion";
 
-import { loginAccount } from "../src/apis/accountApi";
+import { loginAccount } from "../apis/accountApi";
 
 const LogInBody: React.FC = () => {
   const navigate = useNavigate();
@@ -12,12 +12,8 @@ const LogInBody: React.FC = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Frontend-only mock to simulate an auth roundtrip.
-  // Replace this with your real API call when connecting backend.
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // setError("Invalid username or password.");
 
     try {
       const response = await loginAccount(
@@ -37,8 +33,6 @@ const LogInBody: React.FC = () => {
     } catch (error) {
       setError("An error occurred. Please try again.");
     }
-
-    console.log("Logging in with", { username, password });
   };
 
   return (

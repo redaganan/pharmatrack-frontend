@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import "../styles/OrdersBody.css";
-import cartImg from "../images/cart.jpg";
+import "../../styles/OrdersBody.css";
+const cartImg = new URL("../../images/cart.jpg", import.meta.url).href;
 
 type Product = { id: number; name: string; qty: number; price: number };
 type CartItem = {
@@ -77,15 +77,14 @@ const OrdersBody: React.FC = () => {
       ];
     });
 
-  setOrderQty((s) => ({ ...s, [product.id]: 1 }));
-  // show toast when item added
-  setToast(`${product.name} added to cart`);
-  setToastOpen(true);
-  if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-  toastTimerRef.current = window.setTimeout(() => {
-    setToastOpen(false);
-    toastTimerRef.current = null;
-  }, 2500);
+    setOrderQty((s) => ({ ...s, [product.id]: 1 }));
+    setToast(`${product.name} added to cart`);
+    setToastOpen(true);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => {
+      setToastOpen(false);
+      toastTimerRef.current = null;
+    }, 2500);
   };
 
   useEffect(() => {
@@ -106,12 +105,12 @@ const OrdersBody: React.FC = () => {
           const product = products.find((p) => p.id === productId);
           if (!product) return c;
           const newQty = c.qty + delta;
-          if (newQty <= 0) return null; // will be filtered out
+          if (newQty <= 0) return null;
           if (newQty > product.qty) {
             alert("Not enough stock");
             return c;
           }
-          return { ...c, qty: newQty, total: +((newQty * c.price).toFixed(2)) };
+          return { ...c, qty: newQty, total: +(newQty * c.price).toFixed(2) };
         })
         .filter(Boolean) as CartItem[];
     });
@@ -122,8 +121,6 @@ const OrdersBody: React.FC = () => {
       alert("Cart is empty");
       return;
     }
-
-    // create order entries
     const nextIdBase = (orders.reduce((m, o) => Math.max(m, o.id), 0) || 0) + 1;
     const newOrders = cart.map((c, idx) => ({
       id: nextIdBase + idx,
@@ -136,15 +133,12 @@ const OrdersBody: React.FC = () => {
     }));
 
     setOrders((prev) => [...newOrders, ...prev]);
-
-    // reduce stock
     setProducts((prev) =>
       prev.map((p) => {
         const ci = cart.find((c) => c.productId === p.id);
         return ci ? { ...p, qty: Math.max(0, p.qty - ci.qty) } : p;
       })
     );
-
     setCart([]);
     setCartOpen(false);
     alert("Checkout complete");
@@ -157,8 +151,11 @@ const OrdersBody: React.FC = () => {
 
   return (
     <div className="orders-body">
-      {/* Toast notification */}
-      <div className={`toast ${toastOpen ? 'open' : ''}`} role="status" aria-live="polite">
+      <div
+        className={`toast ${toastOpen ? "open" : ""}`}
+        role="status"
+        aria-live="polite"
+      >
         {toast}
       </div>
       <div className="orders-table-container">
@@ -224,7 +221,6 @@ const OrdersBody: React.FC = () => {
         )}
       </div>
 
-      {/* Cart toggle button */}
       <button
         className="cart-toggle"
         onClick={() => setCartOpen(true)}
@@ -233,7 +229,6 @@ const OrdersBody: React.FC = () => {
         🛒 Cart ({cartCount})
       </button>
 
-      {/* Cart slider */}
       <aside className={`cart-slider ${cartOpen ? "open" : ""}`}>
         <div className="cart-header">
           <div className="cart-title">
@@ -251,7 +246,7 @@ const OrdersBody: React.FC = () => {
         </div>
 
         <div className="cart-items">
-            {cart.length === 0 ? (
+          {cart.length === 0 ? (
             <div className="cart-empty">Your cart is empty</div>
           ) : (
             cart.map((c) => (
@@ -260,11 +255,23 @@ const OrdersBody: React.FC = () => {
                   <div className="cart-item-name">{c.name}</div>
                   <div className="cart-item-meta">
                     <div className="cart-qty-controls">
-                      <button className="qty-btn" onClick={() => changeCartQty(c.productId, -1)}>-</button>
+                      <button
+                        className="qty-btn"
+                        onClick={() => changeCartQty(c.productId, -1)}
+                      >
+                        -
+                      </button>
                       <div className="cart-qty">{c.qty}</div>
-                      <button className="qty-btn" onClick={() => changeCartQty(c.productId, 1)}>+</button>
+                      <button
+                        className="qty-btn"
+                        onClick={() => changeCartQty(c.productId, 1)}
+                      >
+                        +
+                      </button>
                     </div>
-                    <div className="cart-item-price">× <span className="amount">{c.price.toFixed(2)}</span></div>
+                    <div className="cart-item-price">
+                      × <span className="amount">{c.price.toFixed(2)}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="cart-item-actions">

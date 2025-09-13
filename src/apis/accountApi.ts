@@ -20,4 +20,13 @@ export const loginAccount = async (url: string, data: object) => {
     return await res.json();
 }
 
-// logoutAccount removed (frontend-only logout in Sidebar)
+export const changePassword = async (url: string, data: object, id: string) => {
+    const res = await fetch(`${url}?accountId=${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+    });
+    return await res.json();
+}

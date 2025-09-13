@@ -1,40 +1,52 @@
 import React, { useEffect, useRef, useState } from "react";
-
 import "../../styles/OrdersBody.css";
+
+import { checkout as checkoutApi, recentOrders } from "../apis/orderApi";
 import { getProducts } from "../apis/productApi";
+
 const cartImg = new URL("../../images/cart.jpg", import.meta.url).href;
 
-type Product = { id: string; name: string; quantity: number; price: number };
+type Product = { _id: string; name: string; quantity: number; price: number };
 type CartItem = {
 	productId: string;
-	name: string;
+	product: string;
 	quantity: number;
 	price: number;
-	total: number;
+	totalAmount: number;
 };
-
-const initialProducts: Product[] = [
-	{ id: "1", name: "Paracetamol 500mg (Biogesic)", quantity: 10, price: 8.5 },
-	{ id: "2", name: "Cetirizine 10mg (Allercet)", quantity: 15, price: 12.0 },
-	{ id: "3", name: "Amoxicillin 500mg (Amoxil)", quantity: 5, price: 45.0 },
-	{ id: "4", name: "Multivitamins (Centrum)", quantity: 8, price: 120.0 },
-	{ id: "5", name: "Ibuprofen 200mg (Advil)", quantity: 20, price: 10.0 },
-];
 
 const OrdersBody: React.FC = () => {
 	const [products, setProducts] = useState<Product[]>([]);
 	const [orderQty, setOrderQty] = useState<Record<string, number>>({});
 	const [orders, setOrders] = useState<
 		{
-			id: number;
+			orderId: string;
 			productId: string;
-			name: string;
+			product: string;
 			quantity: number;
 			price: number;
-			total: number;
-			date: string;
+			totalAmount: number;
+			purchaseDate: string;
 		}[]
 	>([]);
+	const [ordersLoading, setOrdersLoading] = useState(true);
+	const [ordersError, setOrdersError] = useState<string | null>(null);
+
+	// Helper to fetch recent orders
+	const fetchRecentOrders = async () => {
+		setOrdersLoading(true);
+		try {
+			const data = await recentOrders(
+				"http://localhost:8000/api/orders/recent-orders"
+			);
+			setOrders(data);
+			setOrdersError(null);
+		} catch (error) {
+			setOrdersError("Failed to fetch recent orders");
+		} finally {
+			setOrdersLoading(false);
+		}
+	};
 
 	useEffect(() => {
 		const fetchProducts = async () => {
@@ -48,7 +60,23 @@ const OrdersBody: React.FC = () => {
 			}
 		};
 		fetchProducts();
-	}, [products]); // Only fetch once on mount
+	}, []); // Only fetch once on mount
+
+	useEffect(() => {
+		const fetchOrders = async () => {
+			try {
+				const data = await recentOrders(
+					"http://localhost:8000/api/orders/recent-orders"
+				);
+				setOrders(data);
+			} catch (error) {
+				setOrdersError("Failed to fetch recent orders");
+			} finally {
+				setOrdersLoading(false);
+			}
+		};
+		fetchOrders();
+	}, []);
 
 	const [cart, setCart] = useState<CartItem[]>([]);
 	const [cartOpen, setCartOpen] = useState(false);
@@ -61,41 +89,49 @@ const OrdersBody: React.FC = () => {
 	};
 
 	const addToCart = (product: Product) => {
-		const quantity = Math.max(1, Math.floor(orderQty[product.id] || 1));
+		console.log("Adding to cart:", product);
+		const quantity = Math.max(1, Math.floor(orderQty[product._id] || 1));
 		const inCartQuantity =
-			cart.find((c) => c.productId === product.id)?.quantity ?? 0;
+			cart.find((c) => c.productId === product._id)?.quantity ?? 0;
 		if (quantity + inCartQuantity > product.quantity) {
 			alert("Not enough stock to add to cart");
 			return;
 		}
 
 		setCart((prev) => {
-			let updated = false;
-			const newCart = prev.map((c) => {
-				if (c.productId === product.id) {
-					updated = true;
-					const newQuantity = c.quantity + quantity;
-					return {
-						...c,
-						quantity: newQuantity,
-						total: +(newQuantity * c.price).toFixed(2),
-					};
-				}
-				return c;
-			});
-			if (!updated) {
-				newCart.push({
-					productId: product.id,
-					name: product.name,
-					quantity: quantity,
-					price: product.price,
-					total: +(quantity * product.price).toFixed(2),
-				});
+			const existingIndex = prev.findIndex(
+				(c) => c.productId === product._id
+			);
+			if (existingIndex !== -1) {
+				// Update quantity for existing product
+				return prev.map((c, idx) =>
+					idx === existingIndex
+						? {
+								...c,
+								quantity: c.quantity + quantity,
+								total: +(
+									(c.quantity + quantity) *
+									c.price
+								).toFixed(2),
+						  }
+						: c
+				);
+			} else {
+				// Add new product to cart
+				return [
+					...prev,
+					{
+						productId: product._id,
+						product: product.name,
+						quantity: quantity,
+						price: product.price,
+						totalAmount: +(quantity * product.price).toFixed(2),
+					},
+				];
 			}
-			return newCart;
 		});
 
-		setOrderQty((s) => ({ ...s, [product.id]: 1 }));
+		setOrderQty((s) => ({ ...s, [product._id]: 1 }));
 		setToast(`${product.name} added to cart`);
 		setToastOpen(true);
 		if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -120,7 +156,7 @@ const OrdersBody: React.FC = () => {
 			return prev
 				.map((c) => {
 					if (c.productId !== productId) return c;
-					const product = products.find((p) => p.id === productId);
+					const product = products.find((p) => p._id === productId);
 					if (!product) return c;
 					const newQuantity = c.quantity + delta;
 					if (newQuantity <= 0) return null;
@@ -138,27 +174,37 @@ const OrdersBody: React.FC = () => {
 		});
 	};
 
-	const checkout = () => {
+	const checkout = async () => {
 		if (cart.length === 0) {
 			alert("Cart is empty");
 			return;
 		}
-		const nextIdBase =
-			(orders.reduce((m, o) => Math.max(m, o.id), 0) || 0) + 1;
-		const newOrders = cart.map((c, idx) => ({
-			id: nextIdBase + idx,
-			productId: c.productId,
-			name: c.name,
-			quantity: c.quantity,
-			price: c.price,
-			total: c.total,
-			date: new Date().toISOString(),
-		}));
 
-		setOrders((prev) => [...newOrders, ...prev]);
+		const url = "http://localhost:8000/api/orders/create-order";
+		const newOrders: any[] = [];
+
+		for (const c of cart) {
+			const orderData = {
+				orderId: crypto.randomUUID(),
+				purchaseDate: new Date().toISOString(),
+				product: c.product,
+				productId: c.productId,
+				totalAmount: c.totalAmount,
+				quantity: c.quantity,
+			};
+			try {
+				const result = await checkoutApi(url, orderData);
+				newOrders.push(result);
+				console.log("Order response:", result);
+			} catch (err) {
+				console.error("Checkout failed for", c.product, err);
+			}
+		}
+
+		// Update products and clear cart
 		setProducts((prev) =>
 			prev.map((p) => {
-				const ci = cart.find((c) => c.productId === p.id);
+				const ci = cart.find((c) => c.productId === p._id);
 				return ci
 					? { ...p, quantity: Math.max(0, p.quantity - ci.quantity) }
 					: p;
@@ -166,13 +212,17 @@ const OrdersBody: React.FC = () => {
 		);
 		setCart([]);
 		setCartOpen(false);
-		alert("Checkout complete");
+
+		// Refetch recent orders to update UI
+		await fetchRecentOrders();
+
+		console.log("Checkout complete", newOrders);
 	};
 
 	const clearCart = () => setCart([]);
 
 	const cartCount = cart.reduce((s, c) => s + c.quantity, 0);
-	const cartTotal = cart.reduce((s, c) => s + c.total, 0);
+	const cartTotal = cart.reduce((s, c) => s + c.totalAmount, 0);
 
 	return (
 		<div className="orders-body">
@@ -195,12 +245,15 @@ const OrdersBody: React.FC = () => {
 					</thead>
 					<tbody>
 						{products.map((p) => (
-							<tr key={p.id}>
+							<tr key={p._id}>
 								<td>{p.name}</td>
 								<td>{p.quantity}</td>
 								<td className="right price-col">
 									<span className="amount">
-										{p.price.toFixed(2)}
+										{typeof p.price === "number" &&
+										!isNaN(p.price)
+											? p.price.toFixed(2)
+											: "0.00"}
 									</span>
 								</td>
 								<td>
@@ -220,7 +273,11 @@ const OrdersBody: React.FC = () => {
 
 			<div style={{ marginTop: 20 }}>
 				<h4>Recent Orders</h4>
-				{orders.length === 0 ? (
+				{ordersLoading ? (
+					<p>Loading recent orders...</p>
+				) : ordersError ? (
+					<p className="empty">{ordersError}</p>
+				) : orders.length === 0 ? (
 					<p className="empty">No orders yet</p>
 				) : (
 					<table className="orders-table">
@@ -234,13 +291,21 @@ const OrdersBody: React.FC = () => {
 						</thead>
 						<tbody>
 							{orders.map((o) => (
-								<tr key={o.id}>
-									<td>{new Date(o.date).toLocaleString()}</td>
-									<td>{o.name}</td>
+								<tr key={o.orderId}>
+									<td>
+										{new Date(
+											o.purchaseDate
+										).toLocaleString()}
+									</td>
+									<td>{o.product}</td>
 									<td>{o.quantity}</td>
 									<td className="right price-col">
 										<span className="amount">
-											{o.total.toFixed(2)}
+											{typeof o.totalAmount ===
+												"number" &&
+											!isNaN(o.totalAmount)
+												? o.totalAmount.toFixed(2)
+												: "0.00"}
 										</span>
 									</td>
 								</tr>
@@ -285,7 +350,7 @@ const OrdersBody: React.FC = () => {
 							<div className="cart-item" key={c.productId}>
 								<div className="cart-item-info">
 									<div className="cart-item-name">
-										{c.name}
+										{c.product}
 									</div>
 									<div className="cart-item-meta">
 										<div className="cart-qty-controls">
@@ -326,7 +391,7 @@ const OrdersBody: React.FC = () => {
 								<div className="cart-item-actions">
 									<div className="cart-item-total">
 										<span className="amount">
-											{c.total.toFixed(2)}
+											{c.totalAmount.toFixed(2)}
 										</span>
 									</div>
 									<button

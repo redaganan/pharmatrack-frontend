@@ -109,7 +109,7 @@ const OrdersBody: React.FC = () => {
 						? {
 								...c,
 								quantity: c.quantity + quantity,
-								total: +(
+								totalAmount: +(
 									(c.quantity + quantity) *
 									c.price
 								).toFixed(2),
@@ -167,7 +167,7 @@ const OrdersBody: React.FC = () => {
 					return {
 						...c,
 						quantity: newQuantity,
-						total: +(newQuantity * c.price).toFixed(2),
+						totalAmount: +(newQuantity * c.price).toFixed(2),
 					};
 				})
 				.filter(Boolean) as CartItem[];

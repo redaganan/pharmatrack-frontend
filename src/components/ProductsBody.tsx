@@ -70,6 +70,10 @@ const ProductsBody: React.FC = () => {
   }, [products]);
 
   const deleteProduct = async (id: string) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this product?"
+    );
+    if (!confirmed) return;
     console.log("Deleting product with id:", id);
     try {
       const res = await deleteProductApi(

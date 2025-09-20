@@ -226,7 +226,7 @@ const ProductsBody: React.FC = () => {
           </div>
           <div className="product-action center">
             <button className="btn-secondary" onClick={() => openEdit(p)}>
-              Edit
+              Update
             </button>
             <button
               className="delete-btn"
@@ -332,7 +332,7 @@ const ProductsBody: React.FC = () => {
       {editing && (
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal">
-            <h3>Edit Product</h3>
+            <h3>Update Product</h3>
             <form onSubmit={submitEdit}>
               <label>
                 Category

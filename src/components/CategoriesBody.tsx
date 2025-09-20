@@ -100,7 +100,7 @@ const CategoriesBody: React.FC = () => {
   if (error) return <p className="empty">{error}</p>;
 
   return (
-    <div className="products-box">
+    <div className="products-box categories-compact">
       <div
         style={{
           display: "flex",
@@ -117,14 +117,12 @@ const CategoriesBody: React.FC = () => {
 
       <div className="products-header">
         <div>Category</div>
-        <div className="center">Products</div>
         <div className="center">Actions</div>
       </div>
 
       {categories.map((c, idx) => (
         <div className="product-row" key={`${c.name}-${idx}`}>
           <div className="product-name">{c.name}</div>
-          <div className="center">{c.productCount}</div>
           <div className="product-action center">
             <button className="btn-secondary" onClick={() => openEdit(idx)}>
               Edit

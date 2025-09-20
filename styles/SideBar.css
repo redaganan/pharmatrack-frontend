@@ -5,6 +5,11 @@
   display: flex;
   flex-direction: column;
   padding: 20px;
+  position: fixed; /* keep it in place while scrolling */
+  top: 0;
+  left: 0;
+  height: 96vh; /* full viewport height */
+  overflow-y: auto; /* scroll inside if content exceeds viewport */
 }
 
 .sidebar-title {
@@ -37,6 +42,15 @@
   background-color: #34495e;
 }
 
+/* Active link highlight */
+.sidebar-link.active {
+  background-color: #1abc9c; /* accent */
+  color: #ffffff;
+  font-weight: 700;
+}
+.sidebar-link.active:visited { color: #ffffff; }
+.sidebar-link.active:hover { background-color: #17a589; }
+
 .logout {
   margin-top: auto;
   color: #e74c3c;
@@ -44,4 +58,9 @@
 
 .logout:hover {
   background-color: #c0392b;
+}
+
+/* Reserve space so fixed sidebar won't cover page content */
+.dashboard-container {
+  padding-left: 260px; /* 220px width + 20px left + 20px right padding */
 }

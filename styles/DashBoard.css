@@ -207,6 +207,37 @@
   font-size: 14px;
 }
 
+/* Compact categories table */
+.categories-compact {
+  padding: 10px;
+  max-width: 560px;
+  margin: 10px auto;
+}
+.categories-compact .products-header {
+  grid-template-columns: 1.5fr 0.5fr; /* Category | Actions */
+  gap: 6px;
+  padding: 4px 2px;
+  font-size: 14px;
+}
+.categories-compact .product-row {
+  grid-template-columns: 1.5fr 0.5fr; /* Category | Actions */
+  gap: 6px;
+  padding: 6px 2px;
+}
+.categories-compact .product-name {
+  font-size: 14px;
+}
+.categories-compact .btn-secondary,
+.categories-compact .delete-btn,
+.categories-compact .add-product-btn,
+.categories-compact .btn-primary {
+  padding: 4px 8px;
+  font-size: 14px;
+}
+.categories-compact h3 {
+  font-size: 18px;
+}
+
 /* modal and buttons */
 .add-product-btn {
   background: #2ecc71;

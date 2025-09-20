@@ -7,6 +7,7 @@ const LogIn = lazy(() => import('./pages/LogIn'));
 const DashBoard = lazy(() => import('./pages/DashBoard'));
 const Products = lazy(() => import('./pages/Products'));
 const Orders = lazy(() => import('./pages/Orders'));
+const History = lazy(() => import('./pages/History'));
 const Categories = lazy(() => import('./pages/Categories'));
 const CreateAccount = lazy(() => import('./pages/CreateAccount'));
 const Profile = lazy(() => import('./pages/Profile'));
@@ -24,6 +25,7 @@ const PageTransitions = () => {
         <Route path="/dashboard" element={<MotionWrap><DashBoard /></MotionWrap>} />
         <Route path="/products" element={<MotionWrap><Products /></MotionWrap>} />
         <Route path="/orders" element={<MotionWrap><Orders /></MotionWrap>} />
+    <Route path="/history" element={<MotionWrap><History /></MotionWrap>} />
   <Route path="/categories" element={<MotionWrap><Categories /></MotionWrap>} />
         <Route path="/create-account" element={<MotionWrap><CreateAccount /></MotionWrap>} />
         <Route path="/profile" element={<MotionWrap><Profile /></MotionWrap>} />

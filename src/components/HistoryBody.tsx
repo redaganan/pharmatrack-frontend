@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
+import "../../styles/History.css"; // calendar + charts styles
+import "../../styles/OrdersBody.css"; // reuse table/button styles
 import { recentOrders } from "../apis/orderApi";
 import CalendarMonthRange from "./CalendarMonthRange";
-import "../../styles/OrdersBody.css"; // reuse table/button styles
-import "../../styles/History.css"; // calendar + charts styles
 
 type Order = {
   orderId: string;
@@ -73,6 +73,7 @@ const HistoryBody: React.FC = () => {
     const d = startOfDay(new Date());
     setRangeStart(d);
     setRangeEnd(d);
+    console.log(filtered);
   };
 
   const setThisMonth = () => {

@@ -49,6 +49,7 @@ const ProductsBody: React.FC = () => {
   const [newCategory, setNewCategory] = useState<Category>("Medicines");
 
   const [editing, setEditing] = useState<Product | null>(null);
+  const [editName, setEditName] = useState<string>("");
   const [editQuantity, setEditQuantity] = useState<number>();
   const [editPrice, setEditPrice] = useState<number | null>(null);
   const [editExpiryDate, setEditExpiryDate] = useState<string>("");
@@ -67,7 +68,7 @@ const ProductsBody: React.FC = () => {
       }
     };
     fetchProducts();
-  }, [products]);
+  }, []); // fetch once on mount
 
   const deleteProduct = async (id: string) => {
     const confirmed = window.confirm(
@@ -134,6 +135,7 @@ const ProductsBody: React.FC = () => {
 
   const openEdit = (p: Product) => {
     setEditing(p);
+    setEditName(p.name);
     setEditQuantity(p.quantity);
     setEditPrice(p.price);
     setEditExpiryDate(
@@ -159,7 +161,7 @@ const ProductsBody: React.FC = () => {
         formattedExpiry = new Date(editExpiryDate).toISOString().slice(0, 10);
       }
       const productData = {
-        name: editing.name, // If you want to allow editing name, add editName state
+        name: editName.trim() || editing.name,
         quantity: Math.max(0, Math.floor(editQuantity ?? 0)),
         price: Math.max(0, Number(editPrice ?? 0)),
         expiryDate: formattedExpiry || new Date().toISOString().slice(0, 10),
@@ -338,6 +340,15 @@ const ProductsBody: React.FC = () => {
           <div className="modal">
             <h3>Update Product</h3>
             <form onSubmit={submitEdit}>
+              <label>
+                Name
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  required
+                />
+              </label>
               <label>
                 Category
                 <select

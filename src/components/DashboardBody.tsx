@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
-import logoImg from "../../images/LJ-LOGO.png";
+import logoImg from "../../images/LJ-LOGO.png"; // path relative to src/components -> ../../images
 import { getDashboardData, notifyOwners } from "../apis/dashboardApi";
 import { recentOrders } from "../apis/orderApi";
 import { getProducts } from "../apis/productApi";
@@ -11,7 +11,13 @@ const DashboardBody: React.FC = () => {
   const [error, setError] = useState("");
   const [orders, setOrders] = useState<any[]>([]);
   const [ordersError, setOrdersError] = useState<string | null>(null);
-  const [products, setProducts] = useState<any[]>([]);
+  type ProductType = {
+    _id: string;
+    name: string;
+    category?: { name?: string } | string;
+    createdAt?: string;
+  };
+  const [products, setProducts] = useState<ProductType[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,9 +67,12 @@ const DashboardBody: React.FC = () => {
           qty: number;
         }[],
         unsold: [] as { productId: string; product: string }[],
+        slowMovers: [] as { productId: string; product: string; qty: number }[],
+        categoryTotals: [] as { category: string; totalQty: number }[],
         suggestion: "No data yet.",
       };
     }
+
     const now = new Date();
     const thirtyAgo = new Date(
       now.getFullYear(),
@@ -73,30 +82,48 @@ const DashboardBody: React.FC = () => {
     const recent = orders.filter(
       (o) => new Date(o.purchaseDate).getTime() >= thirtyAgo
     );
-    // Build maps keyed by productId for stability even if name changes.
+
+    // Build quantity map keyed by productId (fallback to name)
     const qtyMap = new Map<string, number>();
     for (const o of recent) {
-      const key = o.productId || o.product; // fallback to name if no id
-      qtyMap.set(key, (qtyMap.get(key) || 0) + o.quantity);
+      const key = o.productId || o.product; // fallback
+      qtyMap.set(key, (qtyMap.get(key) || 0) + (o.quantity || 0));
     }
-    // Best sellers: only products that sold at least 40 units in the last 30 days
+
     const BEST_SELLER_THRESHOLD = 40;
+    const SLOW_MOVER_MAX = 20; // inclusive upper bound
+
+    // name map
     const nameById = new Map<string, string>();
+    const productById = new Map<string, any>();
     for (const p of products) {
       nameById.set(p._id, p.name);
+      productById.set(p._id, p);
     }
+
     const bestSellers = Array.from(qtyMap.entries())
-      .filter(([_, qty]) => qty >= BEST_SELLER_THRESHOLD)
+      .filter(([, qty]) => qty >= BEST_SELLER_THRESHOLD)
       .sort((a, b) => b[1] - a[1])
       .map(([productId, qty]) => ({
         productId,
         product: nameById.get(productId) || productId,
         qty,
       }));
-    // Inactive products logic (UPDATED): product created >30 days ago AND has zero purchases ever
+
+    const slowMovers = Array.from(qtyMap.entries())
+      .filter(([, qty]) => qty > 0 && qty <= SLOW_MOVER_MAX)
+      .filter(([id]) => !bestSellers.find((b) => b.productId === id))
+      .sort((a, b) => a[1] - b[1]) // ascending (slowest first)
+      .map(([productId, qty]) => ({
+        productId,
+        product: nameById.get(productId) || productId,
+        qty,
+      }));
+
+    // Unsold logic (product older than 30 days and zero sales ever)
     const soldIds = new Set<string>();
     for (const o of orders) {
-      const key = o.productId || o.product; // maintain same fallback approach
+      const key = o.productId || o.product;
       soldIds.add(key);
     }
     const unsold: { productId: string; product: string }[] = [];
@@ -108,26 +135,49 @@ const DashboardBody: React.FC = () => {
         createdAtTime &&
         createdAtTime < thirtyAgo &&
         !soldIds.has(p._id) &&
-        !soldIds.has(p.name) // include name fallback if orders used name
+        !soldIds.has(p.name)
       ) {
         unsold.push({ productId: p._id, product: p.name });
       }
     }
+
+    // Category aggregation for top 3 chart later
+    const categoryTotalsMap = new Map<string, number>();
+    for (const [pid, qty] of qtyMap.entries()) {
+      const prod = productById.get(pid);
+      const categoryName =
+        prod?.category?.name || prod?.category || "Uncategorized";
+      categoryTotalsMap.set(
+        categoryName,
+        (categoryTotalsMap.get(categoryName) || 0) + qty
+      );
+    }
+    const categoryTotals = Array.from(categoryTotalsMap.entries())
+      .map(([category, totalQty]) => ({ category, totalQty }))
+      .sort((a, b) => b.totalQty - a.totalQty);
+
     let suggestion = "";
     if (bestSellers.length) {
       const top = bestSellers[0];
       suggestion += `Top product: ${top.product} (${top.qty} sold last 30d). `;
+    }
+    if (slowMovers.length) {
+      suggestion += `Monitor slow movers: ${slowMovers
+        .slice(0, 2)
+        .map((s) => s.product)
+        .join(", ")}${slowMovers.length > 2 ? "…" : ""}. `;
     }
     if (unsold.length) {
       suggestion += `Consider promotion / discount: ${unsold
         .slice(0, 3)
         .map((u) => u.product)
         .join(", ")}${unsold.length > 3 ? "…" : ""}.`;
-    } else if (bestSellers.length) {
-      suggestion += "No inactive products in last 30 days.";
+    } else if (bestSellers.length && !slowMovers.length) {
+      suggestion += "Overall healthy sales distribution.";
     }
     if (!suggestion) suggestion = "Insufficient data for suggestions.";
-    return { bestSellers, unsold, suggestion };
+
+    return { bestSellers, unsold, slowMovers, categoryTotals, suggestion };
   }, [orders, products]);
 
   const exportReport = async () => {
@@ -170,6 +220,104 @@ const DashboardBody: React.FC = () => {
         y += 5;
       });
     }
+    // Slow Movers section (not shown on dashboard UI)
+    y += 2;
+    doc.setFontSize(12);
+    doc.text("Slow Movers ", 14, y);
+    doc.setFontSize(10);
+    y += 5;
+    if (analytics.slowMovers.length === 0) {
+      doc.text("None", 18, y);
+      y += 5;
+    } else {
+      analytics.slowMovers.forEach((s) => {
+        if (y > 270) {
+          doc.addPage();
+          y = 14;
+        }
+        doc.text(`${s.product} - ${s.qty} sold`, 18, y);
+        y += 5;
+      });
+    }
+    y += 2;
+    // Top Categories Pie (only if we have data)
+    if (analytics.categoryTotals.length) {
+      doc.setFontSize(12);
+      doc.text("Top Categories (Qty Share)", 14, y);
+      doc.setFontSize(10);
+      y += 5;
+      try {
+        const top3 = analytics.categoryTotals.slice(0, 3);
+        // Draw pie on an offscreen canvas
+        const canvas = document.createElement("canvas");
+        const pieSize = 120;
+        canvas.width = pieSize;
+        canvas.height = pieSize;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          const total = top3.reduce((s, c) => s + c.totalQty, 0) || 1;
+          let start = 0;
+          const colors = ["#4a90e2", "#50e3c2", "#f5a623"]; // reuse palette
+          top3.forEach((c, idx) => {
+            const slice = (c.totalQty / total) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.moveTo(pieSize / 2, pieSize / 2);
+            ctx.arc(
+              pieSize / 2,
+              pieSize / 2,
+              pieSize / 2,
+              start,
+              start + slice
+            );
+            ctx.closePath();
+            ctx.fillStyle = colors[idx % colors.length];
+            ctx.fill();
+            start += slice;
+          });
+          const imgData = canvas.toDataURL("image/png");
+          // Add image (x=14, y=current, width ~40mm maintaining ratio). jsPDF default unit is mm.
+          // Convert pixels to mm roughly: assume 96 dpi -> 25.4mm per inch -> 1px ≈ 0.2645mm
+          const pxToMm = 0.2645;
+          const targetWidthMm = pieSize * pxToMm; // ~31.7mm
+          const targetHeightMm = pieSize * pxToMm;
+          if (y + targetHeightMm > 280) {
+            doc.addPage();
+            y = 14;
+          }
+          doc.addImage(imgData, "PNG", 14, y, targetWidthMm, targetHeightMm);
+          // Legend to right of pie
+          let legendY = y + 2;
+          const legendX = 14 + targetWidthMm + 4;
+          ctx.font = "12px sans-serif";
+          top3.forEach((c, idx) => {
+            const pct = ((c.totalQty / total) * 100).toFixed(1);
+            if (legendY > 280) {
+              doc.addPage();
+              legendY = 14;
+            }
+            doc.setDrawColor(255, 255, 255);
+            const colorTuple =
+              idx === 0
+                ? [74, 144, 226]
+                : idx === 1
+                ? [80, 227, 194]
+                : [245, 166, 35];
+            doc.setFillColor(colorTuple[0], colorTuple[1], colorTuple[2]);
+            doc.rect(legendX, legendY - 3.5, 4, 4, "F");
+            doc.setTextColor(0, 0, 0);
+            doc.text(`${c.category} (${pct}%)`, legendX + 6, legendY);
+            legendY += 6;
+          });
+          y += targetHeightMm + 4;
+        }
+      } catch (err) {
+        // If canvas unavailable (e.g., in non-browser context), skip silently
+        doc.setFontSize(10);
+        doc.text("Category chart unavailable in this environment.", 14, y);
+        y += 6;
+      }
+    }
+
     y += 2;
     doc.setFontSize(12);
     doc.text("Inactive Products", 14, y);
@@ -219,6 +367,80 @@ const DashboardBody: React.FC = () => {
   if (loading) return <div>Loading dashboard...</div>;
   if (error) return <div>{error}</div>;
   if (!dashboard) return null;
+
+  // Small inline pie chart component (top 3 categories)
+  const CategoryPie: React.FC<{
+    categories: { category: string; totalQty: number }[];
+  }> = ({ categories }) => {
+    const total = categories.reduce((s, c) => s + c.totalQty, 0) || 1;
+    const size = 140;
+    const radius = size / 2;
+    let cumulative = 0;
+    const colors = ["#4a90e2", "#50e3c2", "#f5a623"]; // fallback palette
+    const slices = categories.map((c, idx) => {
+      const value = c.totalQty;
+      const startAngle = (cumulative / total) * Math.PI * 2;
+      const endAngle = ((cumulative + value) / total) * Math.PI * 2;
+      cumulative += value;
+      const x1 = radius + radius * Math.sin(startAngle);
+      const y1 = radius - radius * Math.cos(startAngle);
+      const x2 = radius + radius * Math.sin(endAngle);
+      const y2 = radius - radius * Math.cos(endAngle);
+      const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
+      const pathData = `M ${radius} ${radius} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+      return (
+        <path
+          key={c.category}
+          d={pathData}
+          fill={colors[idx % colors.length]}
+          stroke="#fff"
+          strokeWidth={1}
+        />
+      );
+    });
+    return (
+      <div style={{ display: "flex", gap: 12 }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          {slices}
+        </svg>
+        <ul
+          style={{
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+            fontSize: 12,
+            alignSelf: "center",
+          }}
+        >
+          {categories.map((c, idx) => (
+            <li
+              key={c.category}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 4,
+              }}
+            >
+              <span
+                style={{
+                  width: 12,
+                  height: 12,
+                  background: colors[idx % colors.length],
+                  display: "inline-block",
+                  borderRadius: 2,
+                }}
+              />
+              <span style={{ fontWeight: 600 }}>{c.category}</span>
+              <span style={{ color: "#666" }}>
+                ({((c.totalQty / total) * 100).toFixed(0)}%)
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
 
   const handleNotify = async () => {
     try {
@@ -371,6 +593,20 @@ const DashboardBody: React.FC = () => {
               <p style={{ margin: 0, fontSize: 13, lineHeight: 1.4 }}>
                 {analytics.suggestion}
               </p>
+            </div>
+            <div style={{ flex: "1 1 260px", minWidth: 240 }}>
+              <h4 style={{ margin: "4px 0 6px", fontSize: 14 }}>
+                Top Categories
+              </h4>
+              {analytics.categoryTotals.length === 0 ? (
+                <p className="empty" style={{ margin: 0 }}>
+                  No category data
+                </p>
+              ) : (
+                <CategoryPie
+                  categories={analytics.categoryTotals.slice(0, 3)}
+                />
+              )}
             </div>
           </div>
         )}

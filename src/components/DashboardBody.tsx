@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
+import logoImg from "../../images/LJ-LOGO.png";
 import { getDashboardData, notifyOwners } from "../apis/dashboardApi";
 import { recentOrders } from "../apis/orderApi";
 
@@ -96,9 +97,24 @@ const DashboardBody: React.FC = () => {
     return { bestSellers, unsold, suggestion };
   }, [orders]);
 
-  const exportReport = () => {
+  const exportReport = async () => {
     const doc = new jsPDF();
-    let y = 14;
+    // Attempt to embed logo as header (assumes webpack/vite will inline or copy asset)
+    try {
+      // Load image into an HTMLImageElement to ensure it's ready before adding
+      const img = new Image();
+      img.src = logoImg;
+      await new Promise((res, rej) => {
+        img.onload = () => res(true);
+        img.onerror = () => rej(new Error("Failed to load logo image"));
+      });
+      // Add image: x=14, y=8, width ~40, height auto (keep aspect ratio). Adjust if needed.
+      doc.addImage(img, "PNG", 14, 6, 40, 18);
+    } catch (e) {
+      // If image fails, continue without blocking report generation.
+      // Optionally could log e for debugging.
+    }
+    let y = 28; // Push content below logo
     doc.setFontSize(16);
     doc.text("PharmaTrack Analytics Report", 14, y);
     doc.setFontSize(10);
@@ -266,7 +282,7 @@ const DashboardBody: React.FC = () => {
           }}
         >
           <button
-            onClick={exportReport}
+            onClick={() => exportReport()}
             className="btn-secondary"
             style={{ fontSize: 12 }}
           >

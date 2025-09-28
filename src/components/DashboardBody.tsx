@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
-import logoImg from "../../images/LJ-LOGO.png"
+import logoImg from "../../images/LJ-LOGO.png";
 import { getDashboardData, notifyOwners } from "../apis/dashboardApi";
 import { recentOrders } from "../apis/orderApi";
 import { getProducts } from "../apis/productApi";
@@ -55,7 +55,11 @@ const DashboardBody: React.FC = () => {
   const analytics = useMemo(() => {
     if (!orders.length) {
       return {
-        bestSellers: [] as { productId: string; product: string; qty: number }[],
+        bestSellers: [] as {
+          productId: string;
+          product: string;
+          qty: number;
+        }[],
         unsold: [] as { productId: string; product: string }[],
         suggestion: "No data yet.",
       };
@@ -95,10 +99,7 @@ const DashboardBody: React.FC = () => {
       const key = o.productId || o.product;
       lastSold.set(
         key,
-        Math.max(
-          lastSold.get(key) || 0,
-          new Date(o.purchaseDate).getTime()
-        )
+        Math.max(lastSold.get(key) || 0, new Date(o.purchaseDate).getTime())
       );
     }
     const unsold: { productId: string; product: string }[] = [];

@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
-import logoImg from "../../images/LJ-LOGO.png";
+import logoImg from "../../images/LJ-LOGO.png"
 import { getDashboardData, notifyOwners } from "../apis/dashboardApi";
 import { recentOrders } from "../apis/orderApi";
+import { getProducts } from "../apis/productApi";
 
 const DashboardBody: React.FC = () => {
   const [dashboard, setDashboard] = useState<any>(null);
@@ -10,6 +11,7 @@ const DashboardBody: React.FC = () => {
   const [error, setError] = useState("");
   const [orders, setOrders] = useState<any[]>([]);
   const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [products, setProducts] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,15 +37,26 @@ const DashboardBody: React.FC = () => {
         setOrdersError("Failed to load orders for analytics");
       }
     };
+    const fetchProductsList = async () => {
+      try {
+        const list = await getProducts(
+          "http://localhost:8000/api/products/get-product"
+        );
+        setProducts(Array.isArray(list) ? list : []);
+      } catch (e) {
+        // silently ignore
+      }
+    };
     fetchData();
     fetchOrders();
+    fetchProductsList();
   }, []);
 
   const analytics = useMemo(() => {
     if (!orders.length) {
       return {
-        bestSellers: [] as { product: string; qty: number }[],
-        unsold: [] as string[],
+        bestSellers: [] as { productId: string; product: string; qty: number }[],
+        unsold: [] as { productId: string; product: string }[],
         suggestion: "No data yet.",
       };
     }
@@ -56,30 +69,46 @@ const DashboardBody: React.FC = () => {
     const recent = orders.filter(
       (o) => new Date(o.purchaseDate).getTime() >= thirtyAgo
     );
+    // Build maps keyed by productId for stability even if name changes.
     const qtyMap = new Map<string, number>();
     for (const o of recent) {
-      qtyMap.set(o.product, (qtyMap.get(o.product) || 0) + o.quantity);
+      const key = o.productId || o.product; // fallback to name if no id
+      qtyMap.set(key, (qtyMap.get(key) || 0) + o.quantity);
     }
     // Best sellers: only products that sold at least 40 units in the last 30 days
     const BEST_SELLER_THRESHOLD = 40;
+    const nameById = new Map<string, string>();
+    for (const p of products) {
+      nameById.set(p._id, p.name);
+    }
     const bestSellers = Array.from(qtyMap.entries())
       .filter(([_, qty]) => qty >= BEST_SELLER_THRESHOLD)
       .sort((a, b) => b[1] - a[1])
-      .map(([product, qty]) => ({ product, qty }));
+      .map(([productId, qty]) => ({
+        productId,
+        product: nameById.get(productId) || productId,
+        qty,
+      }));
     // Inactive products logic
     const lastSold = new Map<string, number>();
     for (const o of orders) {
+      const key = o.productId || o.product;
       lastSold.set(
-        o.product,
+        key,
         Math.max(
-          lastSold.get(o.product) || 0,
+          lastSold.get(key) || 0,
           new Date(o.purchaseDate).getTime()
         )
       );
     }
-    const unsold: string[] = [];
-    for (const [prod, last] of lastSold.entries()) {
-      if (last < thirtyAgo) unsold.push(prod);
+    const unsold: { productId: string; product: string }[] = [];
+    for (const [prodId, last] of lastSold.entries()) {
+      if (last < thirtyAgo) {
+        unsold.push({
+          productId: prodId,
+          product: nameById.get(prodId) || prodId,
+        });
+      }
     }
     let suggestion = "";
     if (bestSellers.length) {
@@ -89,13 +118,14 @@ const DashboardBody: React.FC = () => {
     if (unsold.length) {
       suggestion += `Consider promotion / discount: ${unsold
         .slice(0, 3)
+        .map((u) => u.product)
         .join(", ")}${unsold.length > 3 ? "…" : ""}.`;
     } else if (bestSellers.length) {
       suggestion += "No inactive products in last 30 days.";
     }
     if (!suggestion) suggestion = "Insufficient data for suggestions.";
     return { bestSellers, unsold, suggestion };
-  }, [orders]);
+  }, [orders, products]);
 
   const exportReport = async () => {
     const doc = new jsPDF();
@@ -151,7 +181,7 @@ const DashboardBody: React.FC = () => {
           doc.addPage();
           y = 14;
         }
-        doc.text(p, 18, y);
+        doc.text(p.product, 18, y);
         y += 5;
       });
       if (analytics.unsold.length > 30) {
@@ -303,7 +333,7 @@ const DashboardBody: React.FC = () => {
               ) : (
                 <ul style={{ margin: 0, paddingLeft: 16 }}>
                   {analytics.bestSellers.map((b) => (
-                    <li key={b.product} style={{ fontSize: 13 }}>
+                    <li key={b.productId} style={{ fontSize: 13 }}>
                       <strong>{b.product}</strong> — {b.qty} sold
                     </li>
                   ))}
@@ -321,8 +351,8 @@ const DashboardBody: React.FC = () => {
               ) : (
                 <ul style={{ margin: 0, paddingLeft: 16 }}>
                   {analytics.unsold.slice(0, 8).map((p) => (
-                    <li key={p} style={{ fontSize: 13 }}>
-                      {p}
+                    <li key={p.productId} style={{ fontSize: 13 }}>
+                      {p.product}
                     </li>
                   ))}
                   {analytics.unsold.length > 8 && (

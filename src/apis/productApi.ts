@@ -22,6 +22,7 @@ export const addProduct = async (url: string, data: object) => {
 };
 
 export const updateProduct = async (url: string, id: string, data: object) => {
+    console.log(id, data);
     const res = await fetch(`${url}?id=${id}`, {
         method: "PUT",
         headers: {

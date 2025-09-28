@@ -93,22 +93,24 @@ const DashboardBody: React.FC = () => {
         product: nameById.get(productId) || productId,
         qty,
       }));
-    // Inactive products logic
-    const lastSold = new Map<string, number>();
+    // Inactive products logic (UPDATED): product created >30 days ago AND has zero purchases ever
+    const soldIds = new Set<string>();
     for (const o of orders) {
-      const key = o.productId || o.product;
-      lastSold.set(
-        key,
-        Math.max(lastSold.get(key) || 0, new Date(o.purchaseDate).getTime())
-      );
+      const key = o.productId || o.product; // maintain same fallback approach
+      soldIds.add(key);
     }
     const unsold: { productId: string; product: string }[] = [];
-    for (const [prodId, last] of lastSold.entries()) {
-      if (last < thirtyAgo) {
-        unsold.push({
-          productId: prodId,
-          product: nameById.get(prodId) || prodId,
-        });
+    for (const p of products) {
+      const createdAtTime = p.createdAt
+        ? new Date(p.createdAt).getTime()
+        : null;
+      if (
+        createdAtTime &&
+        createdAtTime < thirtyAgo &&
+        !soldIds.has(p._id) &&
+        !soldIds.has(p.name) // include name fallback if orders used name
+      ) {
+        unsold.push({ productId: p._id, product: p.name });
       }
     }
     let suggestion = "";

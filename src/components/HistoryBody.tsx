@@ -30,8 +30,9 @@ const HistoryBody: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const today = new Date();
-  const [rangeStart, setRangeStart] = useState<Date | null>(startOfDay(today));
-  const [rangeEnd, setRangeEnd] = useState<Date | null>(startOfDay(today));
+  // Start with no selected range; user must choose dates before data appears
+  const [rangeStart, setRangeStart] = useState<Date | null>(null);
+  const [rangeEnd, setRangeEnd] = useState<Date | null>(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -52,7 +53,8 @@ const HistoryBody: React.FC = () => {
   }, []);
 
   const filtered = useMemo(() => {
-    if (!rangeStart || !rangeEnd) return orders;
+    // If no complete range selected, show nothing
+    if (!rangeStart || !rangeEnd) return [] as Order[];
     const s = startOfDay(rangeStart).getTime();
     const e = startOfDay(rangeEnd).getTime();
     const [minT, maxT] = s <= e ? [s, e] : [e, s];
@@ -191,6 +193,8 @@ const HistoryBody: React.FC = () => {
         <p>Loading history...</p>
       ) : error ? (
         <p className="empty">{error}</p>
+      ) : !rangeStart || !rangeEnd ? (
+        <p className="empty">Select a date range to view orders</p>
       ) : filtered.length === 0 ? (
         <p className="empty">No orders for the selected range</p>
       ) : (

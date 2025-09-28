@@ -36,6 +36,11 @@
 
 .small-note { color: #888; font-size: 12px; }
 
+/* Analytics card */
+.analytics-card { background:#fff; }
+.analytics-card ul { list-style: disc; }
+.analytics-card h4 { font-weight:600; }
+
 /* Responsive */
 @media (min-width: 900px) {
   .history-charts { grid-template-columns: 1fr 1fr; }

@@ -207,6 +207,10 @@
   font-size: 14px;
 }
 
+/* Analytics card (shared style) */
+.analytics-card ul { list-style: disc; }
+.analytics-card h4 { font-weight:600; }
+
 /* Compact categories table */
 .categories-compact {
   padding: 10px;

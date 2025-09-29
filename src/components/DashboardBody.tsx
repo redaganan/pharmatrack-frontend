@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
+// @ts-ignore - image resides outside src tree resolution scope for TS checker tool
 import logoImg from "../../images/LJ-LOGO.png"; // path relative to src/components -> ../../images
 import { getDashboardData, notifyOwners } from "../apis/dashboardApi";
 import { recentOrders } from "../apis/orderApi";
@@ -206,19 +207,67 @@ const DashboardBody: React.FC = () => {
     y += 6;
     doc.text("Window: Last 30 Days", 14, y);
     y += 8;
+
+    // Summary Dashboard removed per user request; proceed directly to Best Sellers section
+    y += 2; // slight spacing before first table
+
     doc.setFontSize(12);
     doc.text("Best Sellers", 14, y);
     doc.setFontSize(10);
     y += 5;
+    // Best Sellers table (Product | Units Sold). Revenue & Trend columns need source data we don't have
+    // without altering logic; we'll only include the two available metrics plus placeholder if desired.
     if (analytics.bestSellers.length === 0) {
       doc.text("No sales recorded.", 18, y);
       y += 5;
     } else {
-      analytics.bestSellers.forEach((b) => {
-        const line = `${b.product} - ${b.qty} sold`;
-        doc.text(line, 18, y);
-        y += 5;
+      const pageWidth2 = doc.internal.pageSize.getWidth();
+      const colWidths = [115, 25];
+      const tableWidth2 = colWidths.reduce((a, b) => a + b, 0);
+      const tableX = (pageWidth2 - tableWidth2) / 2; // center best sellers table
+      const startY = y;
+      // colWidths already defined
+      const cellHeight = 8;
+      const headerBg = [212, 235, 248];
+      let cx = tableX;
+      doc.setDrawColor(150, 150, 150);
+      ["Product", "Units Sold"].forEach((h, idx) => {
+        doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
+        doc.rect(cx, startY, colWidths[idx], cellHeight, "FD");
+        doc.setFontSize(9);
+        doc.text(h, cx + 2, startY + 5);
+        cx += colWidths[idx];
       });
+      let rowY = startY + cellHeight;
+      analytics.bestSellers.slice(0, 15).forEach((b) => {
+        if (rowY > 270) {
+          doc.addPage();
+          rowY = 14; // reset top margin
+          // Redraw header on new page for continuity
+          let headerX = tableX;
+          ["Product", "Units Sold"].forEach((h, idx) => {
+            doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
+            doc.rect(headerX, rowY, colWidths[idx], cellHeight, "FD");
+            doc.setFontSize(9);
+            doc.text(h, headerX + 2, rowY + 5);
+            headerX += colWidths[idx];
+          });
+          rowY += cellHeight;
+        }
+        let cxi = tableX;
+        const rowData = [b.product, String(b.qty)];
+        rowData.forEach((val, i) => {
+          doc.rect(cxi, rowY, colWidths[i], cellHeight, "S");
+          const wrapped = doc.splitTextToSize(val, colWidths[i] - 4);
+          doc.setFontSize(8.5);
+          doc.text(wrapped as string[], cxi + 2, rowY + 5, {
+            baseline: "middle",
+          });
+          cxi += colWidths[i];
+        });
+        rowY += cellHeight;
+      });
+      y = rowY + 10;
     }
     // Slow Movers section (not shown on dashboard UI)
     y += 2;
@@ -587,12 +636,6 @@ const DashboardBody: React.FC = () => {
                   )}
                 </ul>
               )}
-            </div>
-            <div style={{ flex: "2 1 320px", minWidth: 260 }}>
-              <h4 style={{ margin: "4px 0 6px", fontSize: 14 }}>Suggestion</h4>
-              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.4 }}>
-                {analytics.suggestion}
-              </p>
             </div>
             <div style={{ flex: "1 1 260px", minWidth: 240 }}>
               <h4 style={{ margin: "4px 0 6px", fontSize: 14 }}>

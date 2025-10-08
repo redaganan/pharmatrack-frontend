@@ -275,8 +275,8 @@ const HistoryBody: React.FC = () => {
             </div>
           </div>
 
-          <div className="orders-table-container">
-            <table className="orders-table">
+          <div className="orders-table-container" style={{ overflowX: "auto" }}>
+            <table className="orders-table history-orders-table">
               <thead>
                 <tr>
                   <th>Date</th>
@@ -298,9 +298,9 @@ const HistoryBody: React.FC = () => {
                     const d = new Date(o.purchaseDate);
                     return (
                       <tr key={o.orderId}>
-                        <td>{d.toLocaleDateString()}</td>
-                        <td>{d.toLocaleTimeString()}</td>
-                        <td>{o.product}</td>
+                        <td className="nowrap">{d.toLocaleDateString()}</td>
+                        <td className="nowrap">{d.toLocaleTimeString()}</td>
+                        <td className="product-col">{o.product}</td>
                         <td>{o.quantity}</td>
                         <td className="right price-col">
                           <span className="amount">

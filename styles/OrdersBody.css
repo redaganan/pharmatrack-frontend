@@ -15,16 +15,35 @@
 }
 
 .orders-table-container{ overflow:auto; }
-.orders-table{ width:100%; border-collapse:collapse; background:var(--panel); box-shadow:0 1px 0 rgba(0,0,0,0.02); table-layout:fixed; }
+.orders-table{ width:100%; border-collapse:collapse; background:var(--panel); box-shadow:0 1px 0 rgba(0,0,0,0.02); table-layout:auto; }
 .orders-table th, .orders-table td{ padding:10px 12px; text-align:left; border-bottom:1px solid rgba(0,0,0,0.04); font-size:14px; }
 .orders-table th{ background:#fafafa; font-weight:600; color:var(--muted); }
 .orders-table .right{ text-align:right; }
 
 .price-col{ text-align:right; font-variant-numeric: tabular-nums; }
 .orders-table th.price-col{ text-align:right; }
-.orders-table th:nth-child(2), .orders-table td:nth-child(2){ /* Available */ width:100px; text-align:center; }
-.orders-table th:nth-child(3), .orders-table td:nth-child(3){ /* Price */ width:120px; text-align:right; padding-right:14px; }
-.orders-table th:nth-child(4), .orders-table td:nth-child(4){ /* Action */ width:140px; text-align:center; }
+/* Scope fixed widths to the products catalog table only */
+.orders-table.products-catalog-table th:nth-child(2),
+.orders-table.products-catalog-table td:nth-child(2){ /* Available */ width:100px; text-align:center; }
+.orders-table.products-catalog-table th:nth-child(3),
+.orders-table.products-catalog-table td:nth-child(3){ /* Price */ width:120px; text-align:right; padding-right:14px; }
+.orders-table.products-catalog-table th:nth-child(4),
+.orders-table.products-catalog-table td:nth-child(4){ /* Action */ width:140px; text-align:center; }
+
+/* Prevent overlapping text on narrow columns */
+.orders-table td, .orders-table th{ word-break: break-word; }
+.orders-table .nowrap{ white-space: nowrap; }
+
+/* Ensure tables scroll horizontally on small screens instead of crushing columns */
+.orders-table.products-catalog-table { min-width: 640px; }
+.orders-table.recent-orders-table { min-width: 560px; }
+.orders-table.history-orders-table { min-width: 600px; }
+
+/* Product name columns should wrap naturally, not letter-by-letter */
+.orders-table .product-col { word-break: normal; overflow-wrap: anywhere; white-space: normal; }
+
+/* Keep primary buttons on a single line */
+.orders-table .btn-primary { white-space: nowrap; }
 .price-col .amount{ display:inline-block; min-width:64px; text-align:right; }
 .qty-display{ padding:6px 10px; background:#fff; border:1px solid #efefef; border-radius:6px; width:80px; text-align:center; }
 

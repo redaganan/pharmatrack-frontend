@@ -55,3 +55,19 @@ button {
 
 /* Utility */
 .visually-hidden { position: absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+
+/* Fluid media */
+img, video { max-width: 100%; height: auto; }
+
+/* Container utilities */
+.container { width: 100%; margin: 0 auto; padding: 0 16px; box-sizing: border-box; }
+@media (min-width: 640px) { .container { max-width: 640px; } }
+@media (min-width: 768px) { .container { max-width: 768px; } }
+@media (min-width: 1024px) { .container { max-width: 1024px; } }
+@media (min-width: 1280px) { .container { max-width: 1280px; } }
+
+/* Responsive grid helpers */
+.grid { display: grid; gap: 12px; }
+@media (max-width: 768px) {
+	.hide-sm { display: none !important; }
+}

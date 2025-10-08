@@ -254,8 +254,8 @@ const OrdersBody: React.FC = () => {
       >
         {toast}
       </div>
-      <div className="orders-table-container">
-        <table className="orders-table">
+      <div className="orders-table-container" style={{ overflowX: "auto" }}>
+        <table className="orders-table products-catalog-table">
           <thead>
             <tr>
               <th>Product</th>
@@ -267,7 +267,7 @@ const OrdersBody: React.FC = () => {
           <tbody>
             {products.map((p) => (
               <tr key={p._id}>
-                <td>{p.name}</td>
+                <td className="product-col">{p.name}</td>
                 <td>{p.quantity}</td>
                 <td className="right price-col">
                   <span className="amount">
@@ -300,10 +300,11 @@ const OrdersBody: React.FC = () => {
         ) : orders.length === 0 ? (
           <p className="empty">No orders yet</p>
         ) : (
-          <table className="orders-table">
+          <table className="orders-table recent-orders-table">
             <thead>
               <tr>
                 <th>Date</th>
+                <th>Time</th>
                 <th>Product</th>
                 <th>Qty</th>
                 <th className="right price-col">Total</th>
@@ -312,7 +313,15 @@ const OrdersBody: React.FC = () => {
             <tbody>
               {orders.map((o) => (
                 <tr key={o.orderId}>
-                  <td>{new Date(o.purchaseDate).toLocaleString()}</td>
+                  {(() => {
+                    const d = new Date(o.purchaseDate);
+                    return (
+                      <>
+                        <td className="nowrap">{d.toLocaleDateString()}</td>
+                        <td className="nowrap">{d.toLocaleTimeString()}</td>
+                      </>
+                    );
+                  })()}
                   <td>{o.product}</td>
                   <td>{o.quantity}</td>
                   <td className="right price-col">

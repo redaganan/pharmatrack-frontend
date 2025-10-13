@@ -3,6 +3,7 @@ import "../../styles/History.css"; // calendar + charts styles
 import "../../styles/OrdersBody.css"; // reuse table/button styles
 import { recentOrders } from "../apis/orderApi";
 import CalendarMonthRange from "./CalendarMonthRange";
+import jsPDF from "jspdf";
 
 type Order = {
   orderId: string;
@@ -133,6 +134,136 @@ const HistoryBody: React.FC = () => {
   const maxRevenue = Math.max(0, ...series.revenue);
   const maxCount = Math.max(0, ...series.count);
 
+  const exportHistory = () => {
+    if (!rangeStart || !rangeEnd || filtered.length === 0) return;
+
+    // Prepare document
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+    const pageMargin = 40; // left/right
+    const lineHeight = 18;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const innerWidth = pageWidth - pageMargin * 2;
+
+    const title = "Order History";
+    const rangeStr = `${toLocalYMD(startOfDay(rangeStart))} to ${toLocalYMD(
+      startOfDay(rangeEnd)
+    )}`;
+
+    // Columns
+    const baseCols = [
+      { key: "date", label: "Date", width: 90 },
+      { key: "time", label: "Time", width: 80 },
+      { key: "product", label: "Product", width: 220 },
+      { key: "qty", label: "Qty", width: 60, align: "right" as const },
+      {
+        key: "total",
+        label: "Total (PHP)",
+        width: 110,
+        align: "right" as const,
+      },
+    ];
+    const baseTableWidth = baseCols.reduce((s, c) => s + c.width, 0);
+    const scale = Math.min(1, innerWidth / baseTableWidth);
+    const cols = baseCols.map((c) => ({
+      ...c,
+      width: Math.floor(c.width * scale),
+    }));
+    const tableWidth = cols.reduce((s, c) => s + c.width, 0);
+    const tableStartX = pageMargin + Math.max(0, (innerWidth - tableWidth) / 2);
+
+    let y = pageMargin;
+
+    const drawHeader = () => {
+      doc.setFontSize(16);
+      doc.text(title, pageMargin, y);
+      y += lineHeight;
+      doc.setFontSize(11);
+      doc.text(`Range: ${rangeStr}`, pageMargin, y);
+      y += lineHeight * 1.2;
+
+      // table header
+      doc.setFontSize(11);
+      // set bold style for headers
+      doc.setFont("helvetica", "bold");
+      let x = tableStartX;
+      cols.forEach((c) => {
+        const tx = c.align === "right" ? x + c.width : x;
+        const align = c.align || "left";
+        doc.text(c.label, tx, y, { align });
+        x += c.width;
+      });
+      // reset to normal style
+      doc.setFont("helvetica", "normal");
+      y += lineHeight * 0.9;
+      doc.setDrawColor(200);
+      doc.line(tableStartX, y, tableStartX + tableWidth, y);
+      y += lineHeight * 0.3;
+    };
+
+    const addPageIfNeeded = () => {
+      if (y + lineHeight * 2 > pageHeight - pageMargin) {
+        doc.addPage();
+        y = pageMargin;
+        drawHeader();
+      }
+    };
+
+    drawHeader();
+
+    // rows
+    const rows = filtered
+      .slice()
+      .sort(
+        (a, b) =>
+          new Date(a.purchaseDate).getTime() -
+          new Date(b.purchaseDate).getTime()
+      )
+      .map((o) => {
+        const d = new Date(o.purchaseDate);
+        return {
+          date: d.toLocaleDateString(),
+          time: d.toLocaleTimeString(),
+          product: o.product,
+          qty: String(o.quantity),
+          total: Number(o.totalAmount || 0).toFixed(2),
+        };
+      });
+
+    doc.setFontSize(11);
+    rows.forEach((r) => {
+      addPageIfNeeded();
+      let x = tableStartX;
+      cols.forEach((c) => {
+        const text = r[c.key as keyof typeof r] as string;
+        const tx = c.align === "right" ? x + c.width : x;
+        const align = c.align || "left";
+        doc.text(String(text), tx, y, { align, maxWidth: c.width });
+        x += c.width;
+      });
+      y += lineHeight;
+    });
+
+    // Summary
+    addPageIfNeeded();
+    y += lineHeight * 0.2;
+    doc.setDrawColor(200);
+    doc.line(tableStartX, y, tableStartX + tableWidth, y);
+    y += lineHeight;
+    doc.setFont("helvetica", "bold");
+    doc.text(
+      `Orders: ${count}    Revenue: PHP ${revenue.toFixed(2)}`,
+      tableStartX,
+      y
+    );
+    doc.setFont("helvetica", "normal");
+
+    // Save
+    const fileName = `history_${rangeStr.replace(/[^0-9a-zA-Z_-]+/g, "_")}.pdf`;
+    doc.save(fileName);
+  };
+
   return (
     <div className="orders-body">
       {/* reuse spacing/background */}
@@ -199,6 +330,17 @@ const HistoryBody: React.FC = () => {
         <p className="empty">No orders for the selected range</p>
       ) : (
         <>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              margin: "0 0 12px",
+            }}
+          >
+            <button className="btn-primary" onClick={exportHistory}>
+              Export History
+            </button>
+          </div>
           <div className="history-charts">
             <div className="chart-card">
               <div className="chart-title">

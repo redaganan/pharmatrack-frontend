@@ -81,6 +81,12 @@
 .cart-qty-controls{ display:flex; align-items:center; gap:8px; }
 .qty-btn{ width:28px; height:28px; border-radius:6px; border:1px solid #ddd; background:#fff; cursor:pointer; }
 .cart-qty{ min-width:28px; text-align:center; font-weight:600; }
+.cart-qty-input{ width:64px; text-align:center; padding:6px 8px; border:1px solid #ddd; border-radius:6px; }
+/* Hide native spin buttons in WebKit (Chrome, Edge, Safari) */
+.cart-qty-input::-webkit-outer-spin-button,
+.cart-qty-input::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+/* Hide native spin buttons in Firefox */
+.cart-qty-input{ appearance: textfield; -moz-appearance: textfield; }
 .cart-item-price{ margin-left:10px; color:var(--muted); }
 .cart-item-actions{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
 .cart-item-total{ font-weight:700; }

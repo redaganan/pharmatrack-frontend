@@ -237,6 +237,9 @@ const OrdersBody: React.FC = () => {
     // Refetch recent orders to update UI
     await fetchRecentOrders();
 
+    // Notify user after successful checkout
+    alert("Checkout successful!");
+
     console.log("Checkout complete", newOrders);
   };
 

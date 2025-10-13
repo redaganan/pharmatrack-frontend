@@ -201,3 +201,32 @@
 		font-size: 12px;
 	}
 }
+
+/* Captcha row alignment */
+.captcha-row {
+	display: flex;
+	align-items: center; /* vertical center alignment */
+	gap: 12px;
+	margin: 8px 0;
+}
+.captcha-row .captcha-input {
+	width: 56px;
+	text-align: center;
+	margin: 0; /* override default bottom margin */
+}
+.captcha-row .captcha-answer {
+	width: 72px;
+	text-align: center;
+	margin: 0; /* align with siblings */
+}
+.captcha-row .captcha-symbol {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1; /* avoid extra vertical space */
+	user-select: none;
+}
+.captcha-row .captcha-refresh {
+	padding: 6px 10px;
+	margin: 0; /* align with inputs */
+}

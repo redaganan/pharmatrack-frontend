@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useAnimationControls } from "framer-motion";
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../../styles/LogIn.css";
@@ -7,6 +7,7 @@ import { loginAccount } from "../apis/accountApi";
 
 const LogInBody: React.FC = () => {
   const navigate = useNavigate();
+  const titleControls = useAnimationControls();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -25,6 +26,19 @@ const LogInBody: React.FC = () => {
   useEffect(() => {
     generateCaptcha();
   }, []);
+
+  // Ensure the bouncing animation starts on initial mount and loops
+  useEffect(() => {
+    titleControls.start({
+      y: [0, -12, 0],
+      transition: {
+        duration: 1.1,
+        repeat: Infinity,
+        repeatType: "loop",
+        ease: "easeInOut",
+      },
+    });
+  }, [titleControls]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,15 +95,7 @@ const LogInBody: React.FC = () => {
     <form className="login-form" onSubmit={handleSubmit}>
       <div className="login-header">
         <div className="login-title">
-          <motion.h2
-            initial={{ y: 0 }}
-            animate={{ y: [0, -12, 0] }}
-            transition={{
-              duration: 1.1,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          >
+          <motion.h2 initial={{ y: 0 }} animate={titleControls}>
             Welcome to PharmaTrack
           </motion.h2>
         </div>
@@ -116,30 +122,23 @@ const LogInBody: React.FC = () => {
       />
 
       {/* Arithmetic Captcha */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          margin: "8px 0",
-        }}
-      >
+      <div className="captcha-row">
         <input
           type="text"
           value={num1}
           readOnly
-          style={{ width: 56, textAlign: "center" }}
+          className="captcha-input"
           aria-label="First number"
         />
-        <span>+</span>
+        <span className="captcha-symbol">+</span>
         <input
           type="text"
           value={num2}
           readOnly
-          style={{ width: 56, textAlign: "center" }}
+          className="captcha-input"
           aria-label="Second number"
         />
-        <span>=</span>
+        <span className="captcha-symbol">=</span>
         <input
           id="captcha"
           name="captcha"
@@ -149,7 +148,7 @@ const LogInBody: React.FC = () => {
           value={captchaAnswer}
           onChange={(e) => setCaptchaAnswer(e.target.value)}
           placeholder=""
-          style={{ width: 72, textAlign: "center" }}
+          className="captcha-answer"
           aria-label="Captcha answer"
         />
         <button
@@ -162,7 +161,7 @@ const LogInBody: React.FC = () => {
           disabled={loading}
           aria-label="Refresh captcha"
           title="Refresh"
-          style={{ padding: "6px 10px" }}
+          className="captcha-refresh"
         >
           ↻
         </button>

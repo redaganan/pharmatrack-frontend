@@ -30,3 +30,14 @@ export const changePassword = async (url: string, data: object, id: string) => {
     });
     return await res.json();
 }
+
+export const verifyOtp = async (url: string, data: { code: string; accountId: string | null }) => {
+    const res = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+    });
+    return await res.json();
+}

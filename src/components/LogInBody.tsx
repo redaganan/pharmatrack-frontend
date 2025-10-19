@@ -42,9 +42,11 @@ const LogInBody: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     // If captcha is empty, prompt the user explicitly
     if (captchaAnswer.trim() === "") {
       setError("Please fill it with the correct value");
+      setLoading(false);
       return;
     }
     // Simple arithmetic captcha validation
@@ -54,6 +56,7 @@ const LogInBody: React.FC = () => {
       setError("Captcha answer is incorrect. Please try again.");
       setCaptchaAnswer("");
       generateCaptcha();
+      setLoading(false);
       return;
     }
 
@@ -81,13 +84,16 @@ const LogInBody: React.FC = () => {
           localStorage.setItem("accountId", accountId);
           localStorage.setItem("username", username1);
         }
-        navigate("/dashboard");
+        // Go to OTP verification page after login
+        navigate("/otp");
       }
       if (response.status === "error") {
         setError(response.message || "Login failed.");
       }
     } catch (error) {
       setError("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 

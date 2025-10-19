@@ -11,6 +11,7 @@ const History = lazy(() => import('./pages/History'));
 const Categories = lazy(() => import('./pages/Categories'));
 const CreateAccount = lazy(() => import('./pages/CreateAccount'));
 const Profile = lazy(() => import('./pages/Profile'));
+const Otp = lazy(() => import('./pages/Otp'));
 
 // Simple fallback (blank) – spinner removed per request
 const Fallback = () => null;
@@ -29,6 +30,7 @@ const PageTransitions = () => {
   <Route path="/categories" element={<MotionWrap><Categories /></MotionWrap>} />
         <Route path="/create-account" element={<MotionWrap><CreateAccount /></MotionWrap>} />
         <Route path="/profile" element={<MotionWrap><Profile /></MotionWrap>} />
+        <Route path="/otp" element={<MotionWrap><Otp /></MotionWrap>} />
       </Routes>
     </AnimatePresence>
   );

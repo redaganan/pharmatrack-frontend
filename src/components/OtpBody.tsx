@@ -46,8 +46,8 @@ const OtpBody: React.FC = () => {
     try {
       setSubmitting(true);
       const res = await verifyOtp(
-        "http://localhost:8000/api/accounts/verify-otp",
-        { code, accountId: localStorage.getItem("accountId") }
+        `http://localhost:8000/api/accounts/login-otp?username=${localStorage.getItem("username")}`,
+        { otp: code }
       );
       if (res?.status === "success") {
         navigate("/dashboard");

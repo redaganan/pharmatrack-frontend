@@ -39,7 +39,7 @@ const OrdersBody: React.FC = () => {
       const data = await recentOrders(
         "http://localhost:8000/api/orders/recent-orders"
       );
-      setOrders(data);
+      setOrders(Array.isArray(data) ? data.slice(0, 20) : []);
       setOrdersError(null);
     } catch (error) {
       setOrdersError("Failed to fetch recent orders");
@@ -68,7 +68,7 @@ const OrdersBody: React.FC = () => {
         const data = await recentOrders(
           "http://localhost:8000/api/orders/recent-orders"
         );
-        setOrders(data);
+        setOrders(Array.isArray(data) ? data.slice(0, 20) : []);
       } catch (error) {
         setOrdersError("Failed to fetch recent orders");
       } finally {

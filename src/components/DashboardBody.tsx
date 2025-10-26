@@ -112,7 +112,7 @@ const DashboardBody: React.FC = () => {
       qtyMap.set(key, (qtyMap.get(key) || 0) + (o.quantity || 0));
     }
 
-    const BEST_SELLER_THRESHOLD = 40;
+    const BEST_SELLER_THRESHOLD = 50;
     const SLOW_MOVER_MAX = 20; // inclusive upper bound
 
     // Helper to resolve a human name for a product id
@@ -532,7 +532,7 @@ const DashboardBody: React.FC = () => {
           <div className="stat-value">{dashboard.recentOrdersToday}</div>
         </div>
         <div className="stat-card stat-revenue">
-          <div className="stat-title">REVENUE</div>
+          <div className="stat-title">REVENUE TODAY</div>
           <div className="stat-value">₱ {dashboard.revenueToday}</div>
         </div>
       </div>

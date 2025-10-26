@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/LogIn.css";
 
@@ -11,10 +11,14 @@ const CreateAccountBody: React.FC = () => {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const timerRef = useRef<number | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     if (!email || !username || !password || !confirm) {
       setError("Please fill out all fields.");
       return;
@@ -25,6 +29,7 @@ const CreateAccountBody: React.FC = () => {
     }
 
     try {
+      setSubmitting(true);
       const response = await createAccount(
         "http://localhost:8000/api/accounts/create-account",
         {
@@ -35,19 +40,49 @@ const CreateAccountBody: React.FC = () => {
       );
       console.log(response);
       if (response.status === "success") {
-        navigate("/login");
+        setSuccess("Account created successfully.");
+        // Give a short confirmation window, then redirect to login
+        if (timerRef.current) window.clearTimeout(timerRef.current);
+        timerRef.current = window.setTimeout(() => {
+          navigate("/login");
+        }, 1800);
       }
       if (response.status === "error") {
         setError(response.message || "Account creation failed.");
       }
     } catch (error) {
       setError("An error occurred. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, []);
 
   return (
     <form className="login-form" onSubmit={handleSubmit}>
       <h2>Create Account</h2>
+      {success && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            background: "#e6ffed",
+            color: "#1a7f37",
+            border: "1px solid #a7f3d0",
+            padding: 8,
+            borderRadius: 6,
+            marginBottom: 8,
+            fontWeight: 600,
+          }}
+        >
+          {success} Redirecting to login…
+        </div>
+      )}
 
       <label htmlFor="email">Email</label>
       <input
@@ -55,6 +90,7 @@ const CreateAccountBody: React.FC = () => {
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        disabled={submitting}
       />
 
       <label htmlFor="username">Username</label>
@@ -63,6 +99,7 @@ const CreateAccountBody: React.FC = () => {
         type="text"
         value={username}
         onChange={(e) => setUsername(e.target.value)}
+        disabled={submitting}
       />
 
       <label htmlFor="password">Password</label>
@@ -71,6 +108,7 @@ const CreateAccountBody: React.FC = () => {
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
+        disabled={submitting}
       />
 
       <label htmlFor="confirm">Confirm Password</label>
@@ -79,15 +117,19 @@ const CreateAccountBody: React.FC = () => {
         type="password"
         value={confirm}
         onChange={(e) => setConfirm(e.target.value)}
+        disabled={submitting}
       />
 
       {error && <div style={{ color: "red", marginBottom: 8 }}>{error}</div>}
 
-      <button type="submit">Create Account</button>
+      <button type="submit" disabled={submitting}>
+        {submitting ? "Creating…" : "Create Account"}
+      </button>
       <button
         type="button"
         onClick={() => navigate("/login")}
         style={{ marginTop: 8, background: "#ccc", color: "#000" }}
+        disabled={submitting}
       >
         Cancel
       </button>

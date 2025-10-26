@@ -17,6 +17,7 @@ type CartItem = {
 
 const OrdersBody: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [orderQty, setOrderQty] = useState<Record<string, number>>({});
   const [orders, setOrders] = useState<
     {
@@ -248,6 +249,13 @@ const OrdersBody: React.FC = () => {
   const cartCount = cart.reduce((s, c) => s + c.quantity, 0);
   const cartTotal = cart.reduce((s, c) => s + c.totalAmount, 0);
 
+  // Filtered products based on search term (case-insensitive)
+  const filteredProducts = React.useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return products;
+    return products.filter((p) => p.name.toLowerCase().includes(term));
+  }, [products, searchTerm]);
+
   return (
     <div className="orders-body">
       <div
@@ -256,6 +264,31 @@ const OrdersBody: React.FC = () => {
         aria-live="polite"
       >
         {toast}
+      </div>
+      {/* Toolbar with search */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          margin: "6px 0 8px",
+        }}
+      >
+        <div style={{ fontWeight: 600 }}></div>
+        <input
+          type="text"
+          placeholder="Search products..."
+          aria-label="Search products"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 4,
+            border: "1px solid #ccc",
+            minWidth: 240,
+          }}
+        />
       </div>
       <div className="orders-table-container" style={{ overflowX: "auto" }}>
         <table className="orders-table products-catalog-table">
@@ -268,28 +301,36 @@ const OrdersBody: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {products.map((p) => (
-              <tr key={p._id}>
-                <td className="product-col">{p.name}</td>
-                <td>{p.quantity}</td>
-                <td className="right price-col">
-                  <span className="amount">
-                    {typeof p.price === "number" && !isNaN(p.price)
-                      ? p.price.toFixed(2)
-                      : "0.00"}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    className="btn-primary"
-                    onClick={() => addToCart(p)}
-                    disabled={p.quantity === 0}
-                  >
-                    Add to Cart
-                  </button>
+            {filteredProducts.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="empty">
+                  No matching products
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredProducts.map((p) => (
+                <tr key={p._id}>
+                  <td className="product-col">{p.name}</td>
+                  <td>{p.quantity}</td>
+                  <td className="right price-col">
+                    <span className="amount">
+                      {typeof p.price === "number" && !isNaN(p.price)
+                        ? p.price.toFixed(2)
+                        : "0.00"}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      className="btn-primary"
+                      onClick={() => addToCart(p)}
+                      disabled={p.quantity === 0}
+                    >
+                      Add to Cart
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

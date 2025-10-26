@@ -18,6 +18,15 @@ const Fallback = () => null;
 
 const PageTransitions = () => {
   const location = useLocation();
+  // Ensure we always land at the top when navigating between routes
+  React.useEffect(() => {
+    // Scroll window and ensure document/body scroll are reset
+    try {
+      window.scrollTo(0, 0);
+      if (document?.documentElement) document.documentElement.scrollTop = 0;
+      if (document?.body) document.body.scrollTop = 0;
+    } catch {}
+  }, [location.pathname]);
   return (
     <AnimatePresence mode="wait" initial={false}>
       <Routes location={location} key={location.pathname}>

@@ -147,7 +147,7 @@ const CategoriesBody: React.FC = () => {
 					marginBottom: 8,
 				}}
 			>
-				<h3 style={{ margin: 0 }}>Categories</h3>
+				<h3 style={{ margin: 0}}> </h3>
 				<button className="add-product-btn" onClick={openAdd}>
 					+ Add Category
 				</button>

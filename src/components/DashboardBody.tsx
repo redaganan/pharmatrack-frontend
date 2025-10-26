@@ -84,30 +84,46 @@ const DashboardBody: React.FC = () => {
       (o) => new Date(o.purchaseDate).getTime() >= thirtyAgo
     );
 
-    // Build quantity map keyed by productId (fallback to name)
+    // Build product lookup maps from current catalog
+    const nameById = new Map<string, string>();
+    const productById = new Map<string, any>();
+    const idByName = new Map<string, string>();
+    for (const p of products) {
+      nameById.set(p._id, p.name);
+      productById.set(p._id, p);
+      if (p.name) idByName.set(p.name, p._id);
+    }
+
+    // Build quantity map but ONLY for products that still exist in the current catalog.
+    // If an order references a deleted product, we ignore it for analytics export.
     const qtyMap = new Map<string, number>();
     for (const o of recent) {
-      const key = o.productId || o.product; // fallback
+      const id: string | undefined = o.productId;
+      const name: string | undefined = o.product;
+      let key: string | undefined;
+      if (id && productById.has(id)) {
+        key = id; // valid live product
+      } else if (name && idByName.has(name)) {
+        key = idByName.get(name)!; // map by current name
+      } else {
+        // product no longer exists -> skip
+        continue;
+      }
       qtyMap.set(key, (qtyMap.get(key) || 0) + (o.quantity || 0));
     }
 
     const BEST_SELLER_THRESHOLD = 40;
     const SLOW_MOVER_MAX = 20; // inclusive upper bound
 
-    // name map
-    const nameById = new Map<string, string>();
-    const productById = new Map<string, any>();
-    for (const p of products) {
-      nameById.set(p._id, p.name);
-      productById.set(p._id, p);
-    }
+    // Helper to resolve a human name for a product id
+    const resolveName = (key: string) => nameById.get(key) || key;
 
     const bestSellers = Array.from(qtyMap.entries())
       .filter(([, qty]) => qty >= BEST_SELLER_THRESHOLD)
       .sort((a, b) => b[1] - a[1])
       .map(([productId, qty]) => ({
         productId,
-        product: nameById.get(productId) || productId,
+        product: resolveName(productId),
         qty,
       }));
 
@@ -117,7 +133,7 @@ const DashboardBody: React.FC = () => {
       .sort((a, b) => a[1] - b[1]) // ascending (slowest first)
       .map(([productId, qty]) => ({
         productId,
-        product: nameById.get(productId) || productId,
+        product: resolveName(productId),
         qty,
       }));
 

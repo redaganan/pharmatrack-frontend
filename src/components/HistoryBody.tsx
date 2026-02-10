@@ -40,7 +40,7 @@ const HistoryBody: React.FC = () => {
       setLoading(true);
       try {
         const data = await recentOrders(
-          "http://localhost:8000/api/orders/recent-orders"
+          "http://localhost:8000/api/orders/recent-orders",
         );
         setOrders(Array.isArray(data) ? (data as Order[]) : []);
         setError(null);
@@ -67,10 +67,14 @@ const HistoryBody: React.FC = () => {
 
   const revenue = useMemo(
     () => filtered.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0),
-    [filtered]
+    [filtered],
   );
 
   const count = filtered.length;
+  const totalItemsSold = useMemo(
+    () => filtered.reduce((sum, o) => sum + (o.quantity || 0), 0),
+    [filtered],
+  );
 
   const setToday = () => {
     const d = startOfDay(new Date());
@@ -148,7 +152,7 @@ const HistoryBody: React.FC = () => {
 
     const title = "Order History";
     const rangeStr = `${toLocalYMD(startOfDay(rangeStart))} to ${toLocalYMD(
-      startOfDay(rangeEnd)
+      startOfDay(rangeEnd),
     )}`;
 
     // Columns
@@ -218,7 +222,7 @@ const HistoryBody: React.FC = () => {
       .sort(
         (a, b) =>
           new Date(a.purchaseDate).getTime() -
-          new Date(b.purchaseDate).getTime()
+          new Date(b.purchaseDate).getTime(),
       )
       .map((o) => {
         const d = new Date(o.purchaseDate);
@@ -255,7 +259,7 @@ const HistoryBody: React.FC = () => {
     doc.text(
       `Orders: ${count}    Revenue: PHP ${revenue.toFixed(2)}`,
       tableStartX,
-      y
+      y,
     );
     doc.setFont("helvetica", "normal");
 
@@ -293,30 +297,21 @@ const HistoryBody: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 16, margin: "8px 0 16px" }}>
-        <div
-          style={{
-            background: "#fafafa",
-            padding: "10px 12px",
-            borderRadius: 8,
-            boxShadow: "0 1px 0 rgba(0,0,0,0.04)",
-          }}
-        >
-          <div style={{ color: "#6b6b6b", fontSize: 12 }}>Orders</div>
-          <div style={{ fontSize: 20, fontWeight: 800 }}>{count}</div>
+      <div className="history-summary-cards">
+        <div className="history-stat-card">
+          <div className="history-stat-icon">📝</div>
+          <div className="history-stat-value">{count}</div>
+          <div className="history-stat-label">Orders</div>
         </div>
-        <div
-          style={{
-            background: "#fafafa",
-            padding: "10px 12px",
-            borderRadius: 8,
-            boxShadow: "0 1px 0 rgba(0,0,0,0.04)",
-          }}
-        >
-          <div style={{ color: "#6b6b6b", fontSize: 12 }}>Revenue (PHP)</div>
-          <div style={{ fontSize: 20, fontWeight: 800 }}>
-            {revenue.toFixed(2)}
-          </div>
+        <div className="history-stat-card">
+          <div className="history-stat-icon">💰</div>
+          <div className="history-stat-value">₱{revenue.toFixed(2)}</div>
+          <div className="history-stat-label">Total Sales</div>
+        </div>
+        <div className="history-stat-card">
+          <div className="history-stat-icon">📦</div>
+          <div className="history-stat-value">{totalItemsSold}</div>
+          <div className="history-stat-label">Items Sold</div>
         </div>
       </div>
 
@@ -434,7 +429,7 @@ const HistoryBody: React.FC = () => {
                   .sort(
                     (a, b) =>
                       new Date(b.purchaseDate).getTime() -
-                      new Date(a.purchaseDate).getTime()
+                      new Date(a.purchaseDate).getTime(),
                   )
                   .map((o) => {
                     const d = new Date(o.purchaseDate);

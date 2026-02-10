@@ -66,7 +66,7 @@ const LogInBody: React.FC = () => {
         {
           username,
           password,
-        }
+        },
       );
       console.log("Login response:", response);
       let accountId = null;
@@ -83,6 +83,12 @@ const LogInBody: React.FC = () => {
         if (accountId) {
           localStorage.setItem("accountId", accountId);
           localStorage.setItem("username", username1);
+        }
+        // If email failed, store the OTP fallback so OTP page can show it
+        if (response.emailSent === false && response.otp) {
+          localStorage.setItem("otpFallback", response.otp);
+        } else {
+          localStorage.removeItem("otpFallback");
         }
         // Go to OTP verification page after login
         navigate("/otp");

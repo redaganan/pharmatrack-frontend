@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 // @ts-ignore - image resides outside src tree resolution scope for TS checker tool
 import logoImg from "../../images/LJ-LOGO.png"; // path relative to src/components -> ../../images
@@ -7,6 +8,7 @@ import { recentOrders } from "../apis/orderApi";
 import { getProducts } from "../apis/productApi";
 
 const DashboardBody: React.FC = () => {
+  const navigate = useNavigate();
   const [dashboard, setDashboard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -24,7 +26,7 @@ const DashboardBody: React.FC = () => {
     const fetchData = async () => {
       try {
         const res = await getDashboardData(
-          "http://localhost:8000/api/dashboard/data"
+          "http://localhost:8000/api/dashboard/data",
         );
         setDashboard(res.data);
       } catch (err) {
@@ -36,7 +38,7 @@ const DashboardBody: React.FC = () => {
     const fetchOrders = async () => {
       try {
         const data = await recentOrders(
-          "http://localhost:8000/api/orders/recent-orders"
+          "http://localhost:8000/api/orders/recent-orders",
         );
         setOrders(Array.isArray(data) ? data : []);
         setOrdersError(null);
@@ -47,7 +49,7 @@ const DashboardBody: React.FC = () => {
     const fetchProductsList = async () => {
       try {
         const list = await getProducts(
-          "http://localhost:8000/api/products/get-product"
+          "http://localhost:8000/api/products/get-product",
         );
         setProducts(Array.isArray(list) ? list : []);
       } catch (e) {
@@ -78,10 +80,10 @@ const DashboardBody: React.FC = () => {
     const thirtyAgo = new Date(
       now.getFullYear(),
       now.getMonth(),
-      now.getDate() - 30
+      now.getDate() - 30,
     ).getTime();
     const recent = orders.filter(
-      (o) => new Date(o.purchaseDate).getTime() >= thirtyAgo
+      (o) => new Date(o.purchaseDate).getTime() >= thirtyAgo,
     );
 
     // Build product lookup maps from current catalog
@@ -166,7 +168,7 @@ const DashboardBody: React.FC = () => {
         prod?.category?.name || prod?.category || "Uncategorized";
       categoryTotalsMap.set(
         categoryName,
-        (categoryTotalsMap.get(categoryName) || 0) + qty
+        (categoryTotalsMap.get(categoryName) || 0) + qty,
       );
     }
     const categoryTotals = Array.from(categoryTotalsMap.entries())
@@ -332,7 +334,7 @@ const DashboardBody: React.FC = () => {
               pieSize / 2,
               pieSize / 2,
               start,
-              start + slice
+              start + slice,
             );
             ctx.closePath();
             ctx.fillStyle = colors[idx % colors.length];
@@ -365,8 +367,8 @@ const DashboardBody: React.FC = () => {
               idx === 0
                 ? [74, 144, 226]
                 : idx === 1
-                ? [80, 227, 194]
-                : [245, 166, 35];
+                  ? [80, 227, 194]
+                  : [245, 166, 35];
             doc.setFillColor(colorTuple[0], colorTuple[1], colorTuple[2]);
             doc.rect(legendX, legendY - 3.5, 4, 4, "F");
             doc.setTextColor(0, 0, 0);
@@ -416,7 +418,7 @@ const DashboardBody: React.FC = () => {
     y += 5;
     const suggestionLines: string[] = doc.splitTextToSize(
       analytics.suggestion,
-      180
+      180,
     ) as string[];
     suggestionLines.forEach((line: string) => {
       if (y > 270) {
@@ -536,6 +538,37 @@ const DashboardBody: React.FC = () => {
           <div className="stat-value">₱ {dashboard.revenueToday}</div>
         </div>
       </div>
+      {/* Quick Actions - matches mobile app */}
+      <div className="quick-actions-row">
+        <button
+          className="quick-action-card"
+          onClick={() => navigate("/products")}
+        >
+          <span className="quick-action-icon">+</span>
+          <span className="quick-action-label">Add Product</span>
+        </button>
+        <button
+          className="quick-action-card"
+          onClick={() => navigate("/orders")}
+        >
+          <span className="quick-action-icon">🛒</span>
+          <span className="quick-action-label">New Order</span>
+        </button>
+        <button
+          className="quick-action-card"
+          onClick={() => navigate("/history")}
+        >
+          <span className="quick-action-icon">📊</span>
+          <span className="quick-action-label">Reports</span>
+        </button>
+        <button
+          className="quick-action-card"
+          onClick={() => navigate("/categories")}
+        >
+          <span className="quick-action-icon">📂</span>
+          <span className="quick-action-label">Categories</span>
+        </button>
+      </div>
       <div className="lists-row">
         <div className="list-card soon-expire">
           <div className="list-card-header">
@@ -557,7 +590,7 @@ const DashboardBody: React.FC = () => {
               {dashboard.soonToExpireProducts.map(
                 (item: string, idx: number) => (
                   <li key={idx}>{item}</li>
-                )
+                ),
               )}
             </ul>
           )}
@@ -585,7 +618,7 @@ const DashboardBody: React.FC = () => {
                   <li key={idx}>
                     {name} — {dashboard.lowStockProducts.quantity[idx]}
                   </li>
-                )
+                ),
               )}
             </ul>
           )}

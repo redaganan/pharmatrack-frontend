@@ -212,6 +212,40 @@
 .analytics-card ul { list-style: disc; }
 .analytics-card h4 { font-weight:600; }
 
+/* Quick Actions Row (matches mobile) */
+.quick-actions-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.quick-action-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  padding: 16px 12px;
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: transform 150ms, box-shadow 150ms;
+}
+.quick-action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+}
+.quick-action-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+.quick-action-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
 /* Compact categories table */
 .categories-compact {
   padding: 10px;
@@ -348,6 +382,13 @@
 
   .lists-row {
     grid-template-columns: 1fr;
+  }
+
+  .quick-actions-row {
+    flex-wrap: wrap;
+  }
+  .quick-action-card {
+    flex: 1 1 calc(50% - 8px);
   }
 }
 

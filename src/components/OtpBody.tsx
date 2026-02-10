@@ -11,6 +11,10 @@ const OtpBody: React.FC = () => {
   const [error, setError] = useState<string>("");
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
 
+  // Fallback OTP (shown when email delivery fails)
+  const otpFallback = localStorage.getItem("otpFallback");
+  const [showFallback, setShowFallback] = useState(!!otpFallback);
+
   useEffect(() => {
     inputsRef.current[0]?.focus();
   }, []);
@@ -27,7 +31,7 @@ const OtpBody: React.FC = () => {
 
   const handleKeyDown = (
     idx: number,
-    e: React.KeyboardEvent<HTMLInputElement>
+    e: React.KeyboardEvent<HTMLInputElement>,
   ) => {
     if (e.key === "Backspace" && otp[idx] === "" && idx > 0) {
       inputsRef.current[idx - 1]?.focus();
@@ -47,9 +51,10 @@ const OtpBody: React.FC = () => {
       setSubmitting(true);
       const res = await verifyOtp(
         `http://localhost:8000/api/accounts/login-otp?username=${localStorage.getItem("username")}`,
-        { otp: code }
+        { otp: code },
       );
       if (res?.status === "success") {
+        localStorage.removeItem("otpFallback");
         navigate("/dashboard");
       } else {
         setError(res?.message || "Invalid or expired code.");
@@ -71,6 +76,31 @@ const OtpBody: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Show OTP fallback when email delivery failed */}
+      {showFallback && otpFallback && (
+        <div
+          style={{
+            background: "#fff3cd",
+            border: "1px solid #ffc107",
+            borderRadius: 8,
+            padding: "12px 16px",
+            margin: "0 0 12px",
+            textAlign: "center",
+            fontSize: 13,
+          }}
+        >
+          <div style={{ fontWeight: 600, marginBottom: 4, color: "#856404" }}>
+            Email delivery failed
+          </div>
+          <div style={{ color: "#856404" }}>
+            Your OTP code is:{" "}
+            <strong style={{ fontSize: 18, letterSpacing: 4 }}>
+              {otpFallback}
+            </strong>
+          </div>
+        </div>
+      )}
 
       <div
         style={{

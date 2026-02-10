@@ -45,3 +45,36 @@
 @media (min-width: 900px) {
   .history-charts { grid-template-columns: 1fr 1fr; }
 }
+
+/* History Summary Cards (matches mobile) */
+.history-summary-cards {
+  display: flex;
+  gap: 14px;
+  margin: 10px 0 18px;
+  flex-wrap: wrap;
+}
+.history-stat-card {
+  flex: 1;
+  min-width: 120px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 14px 16px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.history-stat-icon {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+.history-stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #2c3e50;
+  margin-bottom: 2px;
+}
+.history-stat-label {
+  font-size: 11px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

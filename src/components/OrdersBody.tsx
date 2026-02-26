@@ -33,6 +33,7 @@ const OrdersBody: React.FC = () => {
       productId: string;
       product: string;
       quantity: number;
+      qty?: number; // mobile app may send qty instead of quantity
       price: number;
       totalAmount: number;
       purchaseDate: string;
@@ -41,6 +42,18 @@ const OrdersBody: React.FC = () => {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState<string | null>(null);
 
+  // Resolve missing product name using the local products list as a fallback,
+  // and normalise the quantity field (mobile may send qty instead of quantity).
+  const normalizeOrder = (o: any) => ({
+    ...o,
+    product:
+      o.product && o.product.trim() !== ""
+        ? o.product
+        : (products.find((p) => p._id === o.productId)?.name ??
+          "Unknown Product"),
+    quantity: o.quantity ?? o.qty ?? 0,
+  });
+
   // Helper to fetch recent orders
   const fetchRecentOrders = async () => {
     setOrdersLoading(true);
@@ -48,7 +61,9 @@ const OrdersBody: React.FC = () => {
       const data = await recentOrders(
         "http://localhost:8000/api/orders/recent-orders",
       );
-      setOrders(Array.isArray(data) ? data.slice(0, 20) : []);
+      setOrders(
+        Array.isArray(data) ? data.slice(0, 20).map(normalizeOrder) : [],
+      );
       setOrdersError(null);
     } catch (error) {
       setOrdersError("Failed to fetch recent orders");
@@ -77,7 +92,9 @@ const OrdersBody: React.FC = () => {
         const data = await recentOrders(
           "http://localhost:8000/api/orders/recent-orders",
         );
-        setOrders(Array.isArray(data) ? data.slice(0, 20) : []);
+        setOrders(
+          Array.isArray(data) ? data.slice(0, 20).map(normalizeOrder) : [],
+        );
       } catch (error) {
         setOrdersError("Failed to fetch recent orders");
       } finally {
@@ -85,7 +102,8 @@ const OrdersBody: React.FC = () => {
       }
     };
     fetchOrders();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products]); // re-run once products are loaded so the name lookup works
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -368,11 +386,19 @@ const OrdersBody: React.FC = () => {
     setPaymentProcessing(true);
     const url = "http://localhost:8000/api/orders/create-order";
     const newOrders: any[] = [];
-    const batchOrderId = "ORD-" + Date.now().toString(36).toUpperCase();
+    // Generate ORD- + 8 random uppercase alphanumeric characters
+    const generateOrderId = () => {
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      let code = "";
+      for (let i = 0; i < 8; i++)
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      return "ORD-" + code;
+    };
+    const batchOrderId = generateOrderId();
 
     for (const c of cart) {
       const orderData = {
-        orderId: crypto.randomUUID(),
+        orderId: generateOrderId(),
         purchaseDate: new Date().toISOString(),
         product: c.product,
         productId: c.productId,
@@ -649,8 +675,8 @@ const OrdersBody: React.FC = () => {
                       </>
                     );
                   })()}
-                  <td>{o.product}</td>
-                  <td>{o.quantity}</td>
+                  <td>{o.product || "Unknown Product"}</td>
+                  <td>{o.quantity ?? o.qty ?? 0}</td>
                   <td className="right price-col">
                     <span className="amount">
                       {typeof o.totalAmount === "number" &&

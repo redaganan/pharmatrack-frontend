@@ -7,6 +7,84 @@ import { getDashboardData, notifyOwners } from "../apis/dashboardApi";
 import { recentOrders } from "../apis/orderApi";
 import { getProducts } from "../apis/productApi";
 
+type AnalyticsPeriod = "this-month" | "last-month" | "last-60" | "last-90";
+
+const PERIOD_LABELS: Record<AnalyticsPeriod, string> = {
+  "this-month": "This Month",
+  "last-month": "Last Month",
+  "last-60": "Last 60 Days",
+  "last-90": "Last 90 Days",
+};
+
+/**
+ * Return { start, end } for the selected period AND the equivalent previous period
+ * so we can compute a "vs previous equivalent period" percentage change.
+ */
+const getPeriodRange = (period: AnalyticsPeriod) => {
+  const now = new Date();
+  let start: Date;
+  let end: Date = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
+  let prevStart: Date;
+  let prevEnd: Date;
+
+  switch (period) {
+    case "this-month": {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const daysElapsed = now.getDate();
+      prevEnd = new Date(start.getTime() - 1); // last day of prev month
+      prevStart = new Date(
+        prevEnd.getFullYear(),
+        prevEnd.getMonth(),
+        prevEnd.getDate() - daysElapsed + 1,
+      );
+      break;
+    }
+    case "last-month": {
+      const firstThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(firstThisMonth.getTime() - 1); // last ms of prev month
+      start = new Date(end.getFullYear(), end.getMonth(), 1);
+      const daysInLastMonth = end.getDate();
+      prevEnd = new Date(start.getTime() - 1);
+      prevStart = new Date(
+        prevEnd.getFullYear(),
+        prevEnd.getMonth(),
+        prevEnd.getDate() - daysInLastMonth + 1,
+      );
+      break;
+    }
+    case "last-60": {
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 60);
+      prevEnd = new Date(start.getTime() - 1);
+      prevStart = new Date(
+        prevEnd.getFullYear(),
+        prevEnd.getMonth(),
+        prevEnd.getDate() - 59,
+      );
+      break;
+    }
+    case "last-90":
+    default: {
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 90);
+      prevEnd = new Date(start.getTime() - 1);
+      prevStart = new Date(
+        prevEnd.getFullYear(),
+        prevEnd.getMonth(),
+        prevEnd.getDate() - 89,
+      );
+      break;
+    }
+  }
+  return { start, end, prevStart, prevEnd };
+};
+
 const DashboardBody: React.FC = () => {
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState<any>(null);
@@ -14,6 +92,8 @@ const DashboardBody: React.FC = () => {
   const [error, setError] = useState("");
   const [orders, setOrders] = useState<any[]>([]);
   const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [analyticsPeriod, setAnalyticsPeriod] =
+    useState<AnalyticsPeriod>("this-month");
   type ProductType = {
     _id: string;
     name: string;
@@ -64,6 +144,12 @@ const DashboardBody: React.FC = () => {
   const analytics = useMemo(() => {
     if (!orders.length) {
       return {
+        ordersCount: 0,
+        unitsSold: 0,
+        revenue: 0,
+        ordersChange: 0,
+        unitsChange: 0,
+        revenueChange: 0,
         bestSellers: [] as {
           productId: string;
           product: string;
@@ -76,15 +162,45 @@ const DashboardBody: React.FC = () => {
       };
     }
 
-    const now = new Date();
-    const thirtyAgo = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate() - 30,
-    ).getTime();
-    const recent = orders.filter(
-      (o) => new Date(o.purchaseDate).getTime() >= thirtyAgo,
+    const { start, end, prevStart, prevEnd } = getPeriodRange(analyticsPeriod);
+    const startTime = start.getTime();
+    const endTime = end.getTime();
+    const prevStartTime = prevStart.getTime();
+    const prevEndTime = prevEnd.getTime();
+
+    const recent = orders.filter((o) => {
+      const t = new Date(o.purchaseDate).getTime();
+      return t >= startTime && t <= endTime;
+    });
+    const prevRecent = orders.filter((o) => {
+      const t = new Date(o.purchaseDate).getTime();
+      return t >= prevStartTime && t <= prevEndTime;
+    });
+
+    // --- Metrics for current period ---
+    const ordersCount = recent.length;
+    const unitsSold = recent.reduce((s, o) => s + (o.quantity || 0), 0);
+    const revenue = recent.reduce((s, o) => s + (o.totalAmount || 0), 0);
+
+    // --- Metrics for previous period ---
+    const prevOrdersCount = prevRecent.length;
+    const prevUnitsSold = prevRecent.reduce((s, o) => s + (o.quantity || 0), 0);
+    const prevRevenue = prevRecent.reduce(
+      (s, o) => s + (o.totalAmount || 0),
+      0,
     );
+
+    // % change helper
+    const pctChange = (cur: number, prev: number) =>
+      prev === 0
+        ? cur > 0
+          ? 100
+          : 0
+        : Math.round(((cur - prev) / prev) * 100);
+
+    const ordersChange = pctChange(ordersCount, prevOrdersCount);
+    const unitsChange = pctChange(unitsSold, prevUnitsSold);
+    const revenueChange = pctChange(revenue, prevRevenue);
 
     // Build product lookup maps from current catalog
     const nameById = new Map<string, string>();
@@ -97,27 +213,24 @@ const DashboardBody: React.FC = () => {
     }
 
     // Build quantity map but ONLY for products that still exist in the current catalog.
-    // If an order references a deleted product, we ignore it for analytics export.
     const qtyMap = new Map<string, number>();
     for (const o of recent) {
       const id: string | undefined = o.productId;
       const name: string | undefined = o.product;
       let key: string | undefined;
       if (id && productById.has(id)) {
-        key = id; // valid live product
+        key = id;
       } else if (name && idByName.has(name)) {
-        key = idByName.get(name)!; // map by current name
+        key = idByName.get(name)!;
       } else {
-        // product no longer exists -> skip
         continue;
       }
       qtyMap.set(key, (qtyMap.get(key) || 0) + (o.quantity || 0));
     }
 
     const BEST_SELLER_THRESHOLD = 50;
-    const SLOW_MOVER_MAX = 20; // inclusive upper bound
+    const SLOW_MOVER_MAX = 20;
 
-    // Helper to resolve a human name for a product id
     const resolveName = (key: string) => nameById.get(key) || key;
 
     const bestSellers = Array.from(qtyMap.entries())
@@ -132,14 +245,14 @@ const DashboardBody: React.FC = () => {
     const slowMovers = Array.from(qtyMap.entries())
       .filter(([, qty]) => qty > 0 && qty <= SLOW_MOVER_MAX)
       .filter(([id]) => !bestSellers.find((b) => b.productId === id))
-      .sort((a, b) => a[1] - b[1]) // ascending (slowest first)
+      .sort((a, b) => a[1] - b[1])
       .map(([productId, qty]) => ({
         productId,
         product: resolveName(productId),
         qty,
       }));
 
-    // Unsold logic (product older than 30 days and zero sales ever)
+    // Unsold logic
     const soldIds = new Set<string>();
     for (const o of orders) {
       const key = o.productId || o.product;
@@ -152,7 +265,7 @@ const DashboardBody: React.FC = () => {
         : null;
       if (
         createdAtTime &&
-        createdAtTime < thirtyAgo &&
+        createdAtTime < startTime &&
         !soldIds.has(p._id) &&
         !soldIds.has(p.name)
       ) {
@@ -196,8 +309,20 @@ const DashboardBody: React.FC = () => {
     }
     if (!suggestion) suggestion = "Insufficient data for suggestions.";
 
-    return { bestSellers, unsold, slowMovers, categoryTotals, suggestion };
-  }, [orders, products]);
+    return {
+      ordersCount,
+      unitsSold,
+      revenue,
+      ordersChange,
+      unitsChange,
+      revenueChange,
+      bestSellers,
+      unsold,
+      slowMovers,
+      categoryTotals,
+      suggestion,
+    };
+  }, [orders, products, analyticsPeriod]);
 
   const exportReport = async () => {
     const doc = new jsPDF();
@@ -223,7 +348,7 @@ const DashboardBody: React.FC = () => {
     y += 6;
     doc.text(`Generated: ${new Date().toLocaleString()}`, 14, y);
     y += 6;
-    doc.text("Window: Last 30 Days", 14, y);
+    doc.text(`Window: ${PERIOD_LABELS[analyticsPeriod]}`, 14, y);
     y += 8;
 
     // Summary Dashboard removed per user request; proceed directly to Best Sellers section
@@ -314,7 +439,7 @@ const DashboardBody: React.FC = () => {
       doc.setFontSize(10);
       y += 5;
       try {
-        const top3 = analytics.categoryTotals.slice(0, 3);
+        const top3 = analytics.categoryTotals.slice(0, 5);
         // Draw pie on an offscreen canvas
         const canvas = document.createElement("canvas");
         const pieSize = 120;
@@ -324,7 +449,13 @@ const DashboardBody: React.FC = () => {
         if (ctx) {
           const total = top3.reduce((s, c) => s + c.totalQty, 0) || 1;
           let start = 0;
-          const colors = ["#4a90e2", "#50e3c2", "#f5a623"]; // reuse palette
+          const colors = [
+            "#4a90e2",
+            "#50e3c2",
+            "#f5a623",
+            "#e74c3c",
+            "#9b59b6",
+          ];
           top3.forEach((c, idx) => {
             const slice = (c.totalQty / total) * Math.PI * 2;
             ctx.beginPath();
@@ -356,6 +487,13 @@ const DashboardBody: React.FC = () => {
           let legendY = y + 2;
           const legendX = 14 + targetWidthMm + 4;
           ctx.font = "12px sans-serif";
+          const colorTuples = [
+            [74, 144, 226],
+            [80, 227, 194],
+            [245, 166, 35],
+            [231, 76, 60],
+            [155, 89, 182],
+          ];
           top3.forEach((c, idx) => {
             const pct = ((c.totalQty / total) * 100).toFixed(1);
             if (legendY > 280) {
@@ -363,12 +501,7 @@ const DashboardBody: React.FC = () => {
               legendY = 14;
             }
             doc.setDrawColor(255, 255, 255);
-            const colorTuple =
-              idx === 0
-                ? [74, 144, 226]
-                : idx === 1
-                  ? [80, 227, 194]
-                  : [245, 166, 35];
+            const colorTuple = colorTuples[idx % colorTuples.length];
             doc.setFillColor(colorTuple[0], colorTuple[1], colorTuple[2]);
             doc.rect(legendX, legendY - 3.5, 4, 4, "F");
             doc.setTextColor(0, 0, 0);
@@ -435,7 +568,7 @@ const DashboardBody: React.FC = () => {
   if (error) return <div>{error}</div>;
   if (!dashboard) return null;
 
-  // Small inline pie chart component (top 3 categories)
+  // Small inline pie chart component (top categories)
   const CategoryPie: React.FC<{
     categories: { category: string; totalQty: number }[];
   }> = ({ categories }) => {
@@ -443,7 +576,7 @@ const DashboardBody: React.FC = () => {
     const size = 140;
     const radius = size / 2;
     let cumulative = 0;
-    const colors = ["#4a90e2", "#50e3c2", "#f5a623"]; // fallback palette
+    const colors = ["#4a90e2", "#50e3c2", "#f5a623", "#e74c3c", "#9b59b6"];
     const slices = categories.map((c, idx) => {
       const value = c.totalQty;
       const startAngle = (cumulative / total) * Math.PI * 2;
@@ -538,37 +671,6 @@ const DashboardBody: React.FC = () => {
           <div className="stat-value">₱ {dashboard.revenueToday}</div>
         </div>
       </div>
-      {/* Quick Actions - matches mobile app */}
-      <div className="quick-actions-row">
-        <button
-          className="quick-action-card"
-          onClick={() => navigate("/products")}
-        >
-          <span className="quick-action-icon">+</span>
-          <span className="quick-action-label">Add Product</span>
-        </button>
-        <button
-          className="quick-action-card"
-          onClick={() => navigate("/orders")}
-        >
-          <span className="quick-action-icon">🛒</span>
-          <span className="quick-action-label">New Order</span>
-        </button>
-        <button
-          className="quick-action-card"
-          onClick={() => navigate("/history")}
-        >
-          <span className="quick-action-icon">📊</span>
-          <span className="quick-action-label">Reports</span>
-        </button>
-        <button
-          className="quick-action-card"
-          onClick={() => navigate("/categories")}
-        >
-          <span className="quick-action-icon">📂</span>
-          <span className="quick-action-label">Categories</span>
-        </button>
-      </div>
       <div className="lists-row">
         <div className="list-card soon-expire">
           <div className="list-card-header">
@@ -625,23 +727,90 @@ const DashboardBody: React.FC = () => {
         </div>
       </div>
       <div className="list-card analytics-card" style={{ marginTop: 20 }}>
-        <h3 style={{ marginTop: 0 }}>Analytics Insights (30 Days)</h3>
         <div
           style={{
             display: "flex",
-            justifyContent: "flex-end",
-            marginTop: -10,
-            marginBottom: 8,
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 8,
           }}
         >
+          <h3 style={{ marginTop: 0, marginBottom: 0 }}>Analytics Insights</h3>
           <button
             onClick={() => exportReport()}
             className="btn-secondary"
-            style={{ fontSize: 12 }}
+            style={{
+              fontSize: 12,
+              border: "1px solid #ccc",
+              borderRadius: 6,
+              padding: "6px 14px",
+            }}
           >
             Export Report
           </button>
         </div>
+
+        {/* Period filter buttons */}
+        <div
+          className="analytics-period-filters"
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            margin: "14px 0 16px",
+          }}
+        >
+          {(Object.keys(PERIOD_LABELS) as AnalyticsPeriod[]).map((key) => (
+            <button
+              key={key}
+              className={`period-btn ${analyticsPeriod === key ? "period-btn-active" : ""}`}
+              onClick={() => setAnalyticsPeriod(key)}
+            >
+              {PERIOD_LABELS[key]}
+            </button>
+          ))}
+        </div>
+
+        {/* Metric cards */}
+        <div className="analytics-metrics-row">
+          <div className="analytics-metric-card">
+            <div className="analytics-metric-label">ORDERS</div>
+            <div className="analytics-metric-value">
+              {analytics.ordersCount}
+            </div>
+            <div
+              className={`analytics-metric-change ${analytics.ordersChange >= 0 ? "change-up" : "change-down"}`}
+            >
+              {analytics.ordersChange >= 0 ? "↑" : "↓"}{" "}
+              {Math.abs(analytics.ordersChange)}%
+            </div>
+          </div>
+          <div className="analytics-metric-card">
+            <div className="analytics-metric-label">UNITS SOLD</div>
+            <div className="analytics-metric-value">{analytics.unitsSold}</div>
+            <div
+              className={`analytics-metric-change ${analytics.unitsChange >= 0 ? "change-up" : "change-down"}`}
+            >
+              {analytics.unitsChange >= 0 ? "↑" : "↓"}{" "}
+              {Math.abs(analytics.unitsChange)}%
+            </div>
+          </div>
+          <div className="analytics-metric-card">
+            <div className="analytics-metric-label">REVENUE</div>
+            <div className="analytics-metric-value">
+              ₱{analytics.revenue.toLocaleString()}
+            </div>
+            <div
+              className={`analytics-metric-change ${analytics.revenueChange >= 0 ? "change-up" : "change-down"}`}
+            >
+              {analytics.revenueChange >= 0 ? "↑" : "↓"}{" "}
+              {Math.abs(analytics.revenueChange)}%
+            </div>
+          </div>
+        </div>
+        <div className="analytics-vs-prev">vs previous equivalent period</div>
+
         {ordersError && <p className="empty">{ordersError}</p>}
         {!ordersError && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
@@ -650,8 +819,8 @@ const DashboardBody: React.FC = () => {
                 Best Sellers
               </h4>
               {analytics.bestSellers.length === 0 ? (
-                <p className="empty" style={{ margin: 0 }}>
-                  No sales in last 30 days.
+                <p className="empty" style={{ margin: 0, fontStyle: "italic" }}>
+                  No best seller for this period
                 </p>
               ) : (
                 <ul style={{ margin: 0, paddingLeft: 16 }}>
@@ -696,7 +865,7 @@ const DashboardBody: React.FC = () => {
                 </p>
               ) : (
                 <CategoryPie
-                  categories={analytics.categoryTotals.slice(0, 3)}
+                  categories={analytics.categoryTotals.slice(0, 5)}
                 />
               )}
             </div>

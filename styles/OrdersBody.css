@@ -318,3 +318,15 @@
 
 /* end OrdersBody.css ----------------------------------------------- */
 
+/* ===== Grouped Transaction Rows ===== */
+.txn-summary-row { background: #fafafa; transition: background 120ms; }
+.txn-summary-row:hover { background: #f0f4ff; }
+.txn-summary-row td { font-weight: 600; }
+.txn-toggle { text-align: center; font-size: 11px; color: var(--muted); user-select: none; width: 30px; }
+.txn-item-row { background: #fff; }
+.txn-item-row td { font-size: 13px; color: #555; border-bottom: 1px solid rgba(0,0,0,0.02); padding-top: 6px; padding-bottom: 6px; }
+.txn-item-name { padding-left: 8px !important; color: #444; }
+/* Ensure grouped tables have enough width */
+.orders-table.recent-orders-table,
+.orders-table.history-orders-table { min-width: 640px; }
+

@@ -29,6 +29,7 @@ const HistoryBody: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedTxns, setExpandedTxns] = useState<Set<string>>(new Set());
 
   const today = new Date();
   // Start with no selected range; user must choose dates before data appears
@@ -70,7 +71,10 @@ const HistoryBody: React.FC = () => {
     [filtered],
   );
 
-  const count = filtered.length;
+  const count = useMemo(
+    () => new Set(filtered.map((o) => o.orderId)).size,
+    [filtered],
+  );
   const totalItemsSold = useMemo(
     () => filtered.reduce((sum, o) => sum + (o.quantity || 0), 0),
     [filtered],
@@ -124,19 +128,55 @@ const HistoryBody: React.FC = () => {
 
   const series = useMemo(() => {
     const revMap = new Map<string, number>();
-    const cntMap = new Map<string, number>();
+    const cntMap = new Map<string, Set<string>>();
     for (const o of filtered) {
       const key = toLocalYMD(new Date(o.purchaseDate));
       revMap.set(key, (revMap.get(key) || 0) + (Number(o.totalAmount) || 0));
-      cntMap.set(key, (cntMap.get(key) || 0) + 1);
+      if (!cntMap.has(key)) cntMap.set(key, new Set());
+      cntMap.get(key)!.add(o.orderId);
     }
     const revenue = dayKeys.map((k) => revMap.get(k) || 0);
-    const count = dayKeys.map((k) => cntMap.get(k) || 0);
+    const count = dayKeys.map((k) => cntMap.get(k)?.size || 0);
     return { revenue, count };
   }, [filtered, dayKeys]);
 
   const maxRevenue = Math.max(0, ...series.revenue);
   const maxCount = Math.max(0, ...series.count);
+
+  // Group filtered orders by orderId into transactions
+  const groupedFiltered = useMemo(() => {
+    const map = new Map<string, Order[]>();
+    for (const o of filtered) {
+      const key = o.orderId;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(o);
+    }
+    return Array.from(map.entries())
+      .map(([orderId, items]) => ({
+        orderId,
+        purchaseDate: items[0].purchaseDate,
+        items,
+        totalQty: items.reduce((s, i) => s + (i.quantity || 0), 0),
+        totalAmount: items.reduce(
+          (s, i) => s + (Number(i.totalAmount) || 0),
+          0,
+        ),
+      }))
+      .sort(
+        (a, b) =>
+          new Date(b.purchaseDate).getTime() -
+          new Date(a.purchaseDate).getTime(),
+      );
+  }, [filtered]);
+
+  const toggleTxn = (orderId: string) => {
+    setExpandedTxns((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  };
 
   const exportHistory = () => {
     if (!rangeStart || !rangeEnd || filtered.length === 0) return;
@@ -416,37 +456,61 @@ const HistoryBody: React.FC = () => {
             <table className="orders-table history-orders-table">
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Time</th>
-                  <th>Product</th>
+                  <th style={{ width: 30 }}></th>
+                  <th>Date & Time</th>
+                  <th>Order ID</th>
+                  <th>Details</th>
                   <th>Qty</th>
                   <th className="right price-col">Total</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered
-                  .slice()
-                  .sort(
-                    (a, b) =>
-                      new Date(b.purchaseDate).getTime() -
-                      new Date(a.purchaseDate).getTime(),
-                  )
-                  .map((o) => {
-                    const d = new Date(o.purchaseDate);
-                    return (
-                      <tr key={o.orderId}>
-                        <td className="nowrap">{d.toLocaleDateString()}</td>
-                        <td className="nowrap">{d.toLocaleTimeString()}</td>
-                        <td className="product-col">{o.product}</td>
-                        <td>{o.quantity}</td>
+                {groupedFiltered.map((txn) => {
+                  const expanded = expandedTxns.has(txn.orderId);
+                  const d = new Date(txn.purchaseDate);
+                  return (
+                    <React.Fragment key={txn.orderId}>
+                      <tr
+                        className="txn-summary-row"
+                        onClick={() => toggleTxn(txn.orderId)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <td className="txn-toggle">{expanded ? "▼" : "▶"}</td>
+                        <td className="nowrap">
+                          {d.toLocaleDateString()} {d.toLocaleTimeString()}
+                        </td>
+                        <td className="nowrap">{txn.orderId}</td>
+                        <td>
+                          {txn.items.length} item
+                          {txn.items.length !== 1 ? "s" : ""}
+                        </td>
+                        <td>{txn.totalQty}</td>
                         <td className="right price-col">
                           <span className="amount">
-                            {Number(o.totalAmount || 0).toFixed(2)}
+                            {txn.totalAmount.toFixed(2)}
                           </span>
                         </td>
                       </tr>
-                    );
-                  })}
+                      {expanded &&
+                        txn.items.map((item, idx) => (
+                          <tr
+                            key={`${txn.orderId}-item-${idx}`}
+                            className="txn-item-row"
+                          >
+                            <td></td>
+                            <td colSpan={2}></td>
+                            <td className="txn-item-name">↳ {item.product}</td>
+                            <td>{item.quantity}</td>
+                            <td className="right price-col">
+                              <span className="amount">
+                                {Number(item.totalAmount || 0).toFixed(2)}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

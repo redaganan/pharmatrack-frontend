@@ -41,6 +41,7 @@ const OrdersBody: React.FC = () => {
   >([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [expandedTxns, setExpandedTxns] = useState<Set<string>>(new Set());
 
   // Resolve missing product name using the local products list as a fallback,
   // and normalise the quantity field (mobile may send qty instead of quantity).
@@ -384,8 +385,7 @@ const OrdersBody: React.FC = () => {
     }
 
     setPaymentProcessing(true);
-    const url = "http://localhost:8000/api/orders/create-order";
-    const newOrders: any[] = [];
+    const url = "http://localhost:8000/api/orders/create-batch-order";
     // Generate ORD- + 8 random uppercase alphanumeric characters
     const generateOrderId = () => {
       const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -396,21 +396,25 @@ const OrdersBody: React.FC = () => {
     };
     const batchOrderId = generateOrderId();
 
-    for (const c of cart) {
-      const orderData = {
-        orderId: generateOrderId(),
-        purchaseDate: new Date().toISOString(),
-        product: c.product,
+    const batchPayload = {
+      orderId: batchOrderId,
+      purchaseDate: new Date().toISOString(),
+      items: cart.map((c) => ({
         productId: c.productId,
-        totalAmount: c.totalAmount,
+        product: c.product,
         quantity: c.quantity,
-      };
-      try {
-        const result = await checkoutApi(url, orderData);
-        newOrders.push(result);
-      } catch (err) {
-        console.error("Checkout failed for", c.product, err);
-      }
+        price: c.price,
+        totalAmount: c.totalAmount,
+      })),
+    };
+
+    try {
+      await checkoutApi(url, batchPayload);
+    } catch (err) {
+      console.error("Checkout failed", err);
+      alert("Checkout failed. Please try again.");
+      setPaymentProcessing(false);
+      return;
     }
 
     // Save completed order for receipt
@@ -542,6 +546,32 @@ const OrdersBody: React.FC = () => {
     return products.filter((p) => p.name.toLowerCase().includes(term));
   }, [products, searchTerm]);
 
+  // Group orders by orderId into transactions
+  const groupedOrders = React.useMemo(() => {
+    const map = new Map<string, typeof orders>();
+    for (const o of orders) {
+      const key = o.orderId;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(o);
+    }
+    return Array.from(map.entries()).map(([orderId, items]) => ({
+      orderId,
+      purchaseDate: items[0].purchaseDate,
+      items,
+      totalQty: items.reduce((s, i) => s + (i.quantity ?? i.qty ?? 0), 0),
+      totalAmount: items.reduce((s, i) => s + (i.totalAmount || 0), 0),
+    }));
+  }, [orders]);
+
+  const toggleTxn = (orderId: string) => {
+    setExpandedTxns((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  };
+
   return (
     <div className="orders-body">
       <div
@@ -650,43 +680,69 @@ const OrdersBody: React.FC = () => {
           <p>Loading recent orders...</p>
         ) : ordersError ? (
           <p className="empty">{ordersError}</p>
-        ) : orders.length === 0 ? (
+        ) : groupedOrders.length === 0 ? (
           <p className="empty">No orders yet</p>
         ) : (
           <table className="orders-table recent-orders-table">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Product</th>
+                <th style={{ width: 30 }}></th>
+                <th>Date & Time</th>
+                <th>Order ID</th>
+                <th>Details</th>
                 <th>Qty</th>
-                <th className="right price-col">Total</th>
+                <th className="right price-col">Total (PHP)</th>
               </tr>
             </thead>
             <tbody>
-              {orders.map((o) => (
-                <tr key={o.orderId}>
-                  {(() => {
-                    const d = new Date(o.purchaseDate);
-                    return (
-                      <>
-                        <td className="nowrap">{d.toLocaleDateString()}</td>
-                        <td className="nowrap">{d.toLocaleTimeString()}</td>
-                      </>
-                    );
-                  })()}
-                  <td>{o.product || "Unknown Product"}</td>
-                  <td>{o.quantity ?? o.qty ?? 0}</td>
-                  <td className="right price-col">
-                    <span className="amount">
-                      {typeof o.totalAmount === "number" &&
-                      !isNaN(o.totalAmount)
-                        ? o.totalAmount.toFixed(2)
-                        : "0.00"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {groupedOrders.map((txn) => {
+                const expanded = expandedTxns.has(txn.orderId);
+                const d = new Date(txn.purchaseDate);
+                return (
+                  <React.Fragment key={txn.orderId}>
+                    <tr
+                      className="txn-summary-row"
+                      onClick={() => toggleTxn(txn.orderId)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <td className="txn-toggle">{expanded ? "▼" : "▶"}</td>
+                      <td className="nowrap">
+                        {d.toLocaleDateString()} {d.toLocaleTimeString()}
+                      </td>
+                      <td className="nowrap">{txn.orderId}</td>
+                      <td>
+                        {txn.items.length} item
+                        {txn.items.length !== 1 ? "s" : ""}
+                      </td>
+                      <td>{txn.totalQty}</td>
+                      <td className="right price-col">
+                        <span className="amount">
+                          {txn.totalAmount.toFixed(2)}
+                        </span>
+                      </td>
+                    </tr>
+                    {expanded &&
+                      txn.items.map((item, idx) => (
+                        <tr
+                          key={`${txn.orderId}-item-${idx}`}
+                          className="txn-item-row"
+                        >
+                          <td></td>
+                          <td colSpan={2}></td>
+                          <td className="txn-item-name">
+                            ↳ {item.product || "Unknown Product"}
+                          </td>
+                          <td>{item.quantity ?? item.qty ?? 0}</td>
+                          <td className="right price-col">
+                            <span className="amount">
+                              {(item.totalAmount || 0).toFixed(2)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         )}

@@ -7,18 +7,18 @@ import { getDashboardData, notifyOwners } from "../apis/dashboardApi";
 import { recentOrders } from "../apis/orderApi";
 import { getProducts } from "../apis/productApi";
 
-type AnalyticsPeriod = "this-month" | "last-month" | "last-60" | "last-90";
+type AnalyticsPeriod = "this-month" | "last-month" | "last-2-months" | "last-3-months";
 
 const PERIOD_LABELS: Record<AnalyticsPeriod, string> = {
   "this-month": "This Month",
   "last-month": "Last Month",
-  "last-60": "Last 60 Days",
-  "last-90": "Last 90 Days",
+  "last-2-months": "Last 2 Months",
+  "last-3-months": "Last 3 Months",
 };
 
 /**
- * Return { start, end } for the selected period AND the equivalent previous period
- * so we can compute a "vs previous equivalent period" percentage change.
+ * Return { start, end } for the selected period.
+ * Comparison is always against "This Month".
  */
 const getPeriodRange = (period: AnalyticsPeriod) => {
   const now = new Date();
@@ -32,57 +32,49 @@ const getPeriodRange = (period: AnalyticsPeriod) => {
     59,
     999,
   );
-  let prevStart: Date;
-  let prevEnd: Date;
 
   switch (period) {
     case "this-month": {
       start = new Date(now.getFullYear(), now.getMonth(), 1);
-      const daysElapsed = now.getDate();
-      prevEnd = new Date(start.getTime() - 1); // last day of prev month
-      prevStart = new Date(
-        prevEnd.getFullYear(),
-        prevEnd.getMonth(),
-        prevEnd.getDate() - daysElapsed + 1,
-      );
       break;
     }
     case "last-month": {
       const firstThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       end = new Date(firstThisMonth.getTime() - 1); // last ms of prev month
       start = new Date(end.getFullYear(), end.getMonth(), 1);
-      const daysInLastMonth = end.getDate();
-      prevEnd = new Date(start.getTime() - 1);
-      prevStart = new Date(
-        prevEnd.getFullYear(),
-        prevEnd.getMonth(),
-        prevEnd.getDate() - daysInLastMonth + 1,
-      );
       break;
     }
-    case "last-60": {
-      start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 60);
-      prevEnd = new Date(start.getTime() - 1);
-      prevStart = new Date(
-        prevEnd.getFullYear(),
-        prevEnd.getMonth(),
-        prevEnd.getDate() - 59,
-      );
+    case "last-2-months": {
+      const firstThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(firstThisMonth.getTime() - 1); // last ms of prev month
+      start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
       break;
     }
-    case "last-90":
+    case "last-3-months":
     default: {
-      start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 90);
-      prevEnd = new Date(start.getTime() - 1);
-      prevStart = new Date(
-        prevEnd.getFullYear(),
-        prevEnd.getMonth(),
-        prevEnd.getDate() - 89,
-      );
+      const firstThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(firstThisMonth.getTime() - 1); // last ms of prev month
+      start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
       break;
     }
   }
-  return { start, end, prevStart, prevEnd };
+  return { start, end };
+};
+
+/** Return { start, end } for the current calendar month (always used as comparison baseline). */
+const getThisMonthRange = () => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
+  return { start, end };
 };
 
 const DashboardBody: React.FC = () => {
@@ -150,6 +142,9 @@ const DashboardBody: React.FC = () => {
         ordersChange: 0,
         unitsChange: 0,
         revenueChange: 0,
+        tmOrdersCount: 0,
+        tmUnitsSold: 0,
+        tmRevenue: 0,
         bestSellers: [] as {
           productId: string;
           product: string;
@@ -162,45 +157,50 @@ const DashboardBody: React.FC = () => {
       };
     }
 
-    const { start, end, prevStart, prevEnd } = getPeriodRange(analyticsPeriod);
+    const { start, end } = getPeriodRange(analyticsPeriod);
     const startTime = start.getTime();
     const endTime = end.getTime();
-    const prevStartTime = prevStart.getTime();
-    const prevEndTime = prevEnd.getTime();
+
+    // Always compute "This Month" metrics as the comparison baseline
+    const tm = getThisMonthRange();
+    const tmStartTime = tm.start.getTime();
+    const tmEndTime = tm.end.getTime();
 
     const recent = orders.filter((o) => {
       const t = new Date(o.purchaseDate).getTime();
       return t >= startTime && t <= endTime;
     });
-    const prevRecent = orders.filter((o) => {
+    const thisMonthOrders = orders.filter((o) => {
       const t = new Date(o.purchaseDate).getTime();
-      return t >= prevStartTime && t <= prevEndTime;
+      return t >= tmStartTime && t <= tmEndTime;
     });
 
-    // --- Metrics for current period ---
-    const ordersCount = recent.length;
+    // --- Metrics for selected period ---
+    const ordersCount = new Set(recent.map((o: any) => o.orderId)).size;
     const unitsSold = recent.reduce((s, o) => s + (o.quantity || 0), 0);
     const revenue = recent.reduce((s, o) => s + (o.totalAmount || 0), 0);
 
-    // --- Metrics for previous period ---
-    const prevOrdersCount = prevRecent.length;
-    const prevUnitsSold = prevRecent.reduce((s, o) => s + (o.quantity || 0), 0);
-    const prevRevenue = prevRecent.reduce(
+    // --- Metrics for This Month (baseline) ---
+    const tmOrdersCount = new Set(thisMonthOrders.map((o: any) => o.orderId)).size;
+    const tmUnitsSold = thisMonthOrders.reduce((s, o) => s + (o.quantity || 0), 0);
+    const tmRevenue = thisMonthOrders.reduce(
       (s, o) => s + (o.totalAmount || 0),
       0,
     );
 
-    // % change helper
-    const pctChange = (cur: number, prev: number) =>
-      prev === 0
-        ? cur > 0
+    // % change helper: how This Month compares to the selected period
+    const pctChange = (thisMonthVal: number, selectedVal: number) =>
+      selectedVal === 0
+        ? thisMonthVal > 0
           ? 100
           : 0
-        : Math.round(((cur - prev) / prev) * 100);
+        : Math.round(((thisMonthVal - selectedVal) / selectedVal) * 100);
 
-    const ordersChange = pctChange(ordersCount, prevOrdersCount);
-    const unitsChange = pctChange(unitsSold, prevUnitsSold);
-    const revenueChange = pctChange(revenue, prevRevenue);
+    // When "This Month" is selected, no comparison needed (0%)
+    const isThisMonth = analyticsPeriod === "this-month";
+    const ordersChange = isThisMonth ? 0 : pctChange(tmOrdersCount, ordersCount);
+    const unitsChange = isThisMonth ? 0 : pctChange(tmUnitsSold, unitsSold);
+    const revenueChange = isThisMonth ? 0 : pctChange(tmRevenue, revenue);
 
     // Build product lookup maps from current catalog
     const nameById = new Map<string, string>();
@@ -316,6 +316,9 @@ const DashboardBody: React.FC = () => {
       ordersChange,
       unitsChange,
       revenueChange,
+      tmOrdersCount,
+      tmUnitsSold,
+      tmRevenue,
       bestSellers,
       unsold,
       slowMovers,
@@ -779,37 +782,60 @@ const DashboardBody: React.FC = () => {
             <div className="analytics-metric-value">
               {analytics.ordersCount}
             </div>
-            <div
-              className={`analytics-metric-change ${analytics.ordersChange >= 0 ? "change-up" : "change-down"}`}
-            >
-              {analytics.ordersChange >= 0 ? "↑" : "↓"}{" "}
-              {Math.abs(analytics.ordersChange)}%
-            </div>
+            {analyticsPeriod !== "this-month" && (
+              <>
+                <div className="analytics-metric-thismonth">
+                  This Month: {analytics.tmOrdersCount}
+                </div>
+                <div
+                  className={`analytics-metric-change ${analytics.ordersChange >= 0 ? "change-up" : "change-down"}`}
+                >
+                  {analytics.ordersChange >= 0 ? "↑" : "↓"}{" "}
+                  {Math.abs(analytics.ordersChange)}%
+                </div>
+              </>
+            )}
           </div>
           <div className="analytics-metric-card">
             <div className="analytics-metric-label">UNITS SOLD</div>
             <div className="analytics-metric-value">{analytics.unitsSold}</div>
-            <div
-              className={`analytics-metric-change ${analytics.unitsChange >= 0 ? "change-up" : "change-down"}`}
-            >
-              {analytics.unitsChange >= 0 ? "↑" : "↓"}{" "}
-              {Math.abs(analytics.unitsChange)}%
-            </div>
+            {analyticsPeriod !== "this-month" && (
+              <>
+                <div className="analytics-metric-thismonth">
+                  This Month: {analytics.tmUnitsSold}
+                </div>
+                <div
+                  className={`analytics-metric-change ${analytics.unitsChange >= 0 ? "change-up" : "change-down"}`}
+                >
+                  {analytics.unitsChange >= 0 ? "↑" : "↓"}{" "}
+                  {Math.abs(analytics.unitsChange)}%
+                </div>
+              </>
+            )}
           </div>
           <div className="analytics-metric-card">
             <div className="analytics-metric-label">REVENUE</div>
             <div className="analytics-metric-value">
               ₱{analytics.revenue.toLocaleString()}
             </div>
-            <div
-              className={`analytics-metric-change ${analytics.revenueChange >= 0 ? "change-up" : "change-down"}`}
-            >
-              {analytics.revenueChange >= 0 ? "↑" : "↓"}{" "}
-              {Math.abs(analytics.revenueChange)}%
-            </div>
+            {analyticsPeriod !== "this-month" && (
+              <>
+                <div className="analytics-metric-thismonth">
+                  This Month: ₱{analytics.tmRevenue.toLocaleString()}
+                </div>
+                <div
+                  className={`analytics-metric-change ${analytics.revenueChange >= 0 ? "change-up" : "change-down"}`}
+                >
+                  {analytics.revenueChange >= 0 ? "↑" : "↓"}{" "}
+                  {Math.abs(analytics.revenueChange)}%
+                </div>
+              </>
+            )}
           </div>
         </div>
-        <div className="analytics-vs-prev">vs previous equivalent period</div>
+        {analyticsPeriod !== "this-month" && (
+          <div className="analytics-vs-prev">vs This Month</div>
+        )}
 
         {ordersError && <p className="empty">{ordersError}</p>}
         {!ordersError && (
